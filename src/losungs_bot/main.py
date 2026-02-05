@@ -96,13 +96,12 @@ class LosungsBot:
             minute=minute,
         )
 
+        next_run = scheduler.get_next_run_time()
         logger.info(
             "bot_ready",
             post_time=self.settings.post_time,
             timezone=self.settings.timezone,
-            next_run=scheduler.get_next_run_time().isoformat()
-            if scheduler.get_next_run_time()
-            else None,
+            next_run=next_run.isoformat() if next_run else "unknown",
         )
 
         # Scheduler starten (blockiert)

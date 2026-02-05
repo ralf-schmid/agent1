@@ -5,6 +5,7 @@ WORKDIR /app
 
 # System-Dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
 # Anwendungscode kopieren (für pip install benötigt)
@@ -16,6 +17,10 @@ RUN pip install --no-cache-dir .
 
 # Daten-Verzeichnis kopieren
 COPY data/ ./data/
+
+# Entrypoint-Skript kopieren
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Nicht-Root-User erstellen
 RUN useradd --create-home --shell /bin/bash botuser \
@@ -30,6 +35,6 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3 \
 # Standard: Scheduler-Modus
 # --once: Einmaliger Post
 # --dry-run: Vorschau ohne Post
-# shell: Startet eine Shell für Debugging
-ENTRYPOINT ["python", "-m", "losungs_bot.main"]
+# shell/bash: Startet eine Shell für Debugging
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD []

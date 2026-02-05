@@ -53,12 +53,11 @@ class LosungScheduler:
             replace_existing=True,
         )
 
-        next_run = self.scheduler.get_job("daily_losung_post").next_run_time
         logger.info(
             "daily_job_scheduled",
             hour=hour,
             minute=minute,
-            next_run=next_run.isoformat() if next_run else None,
+            timezone=str(self.timezone),
         )
 
     def run_now(self, job_func: Callable) -> None:
@@ -78,7 +77,12 @@ class LosungScheduler:
     def get_next_run_time(self) -> datetime | None:
         """Gibt den nächsten geplanten Ausführungszeitpunkt zurück."""
         job = self.scheduler.get_job("daily_losung_post")
-        return job.next_run_time if job else None
+        if job is None:
+            return None
+        # Kompatibilität mit APScheduler v3 und v4
+        if hasattr(job, "next_run_time"):
+            return job.next_run_time
+        return None
 
 
 def parse_time(time_str: str) -> tuple[int, int]:
