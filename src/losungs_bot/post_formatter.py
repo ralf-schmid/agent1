@@ -26,21 +26,10 @@ class PostFormatter:
         "Dezember",
     ]
 
-    # Grüße je nach Tageszeit (für zukünftige Erweiterung)
-    GREETINGS = [
-        "Guten Morgen! ☀️",
-        "Einen wunderschönen guten Morgen! 🌅",
-        "Hallo und guten Morgen! 🌤️",
-        "Guten Morgen, ihr Lieben! 💫",
-    ]
-
-    # Abschlussgrüße
-    CLOSINGS = [
-        "Einen gesegneten Tag euch allen! 🙏",
-        "Habt einen wundervollen Tag! ✨",
-        "Seid gesegnet heute! 🙏💕",
-        "Gottes Segen für den Tag! 🙏",
-    ]
+    # Copyright-Hinweis gemäß Nutzungsbedingungen losungen.de
+    COPYRIGHT = "© Evangelische Brüder-Unität – Herrnhuter Brüdergemeine"
+    COPYRIGHT_URL = "https://www.herrnhuter.de"
+    INFO_URL = "https://www.losungen.de"
 
     def __init__(self, bible_link_generator: BibleLinkGenerator):
         self.bible_links = bible_link_generator
@@ -61,25 +50,21 @@ class PostFormatter:
         losung_url = self.bible_links.generate_short_url(losung.losungsvers)
         lehrtext_url = self.bible_links.generate_short_url(losung.lehrtextvers)
 
-        # Greeting basierend auf Tag des Jahres für Abwechslung
-        greeting_idx = losung.datum.timetuple().tm_yday % len(self.GREETINGS)
-        closing_idx = losung.datum.timetuple().tm_yday % len(self.CLOSINGS)
+        post = f"""📖 Die Losungen – {datum_str}
 
-        post = f"""{self.GREETINGS[greeting_idx]} Hier kommt die Losung für den {datum_str} 📖
-
-✨ Losung (AT):
-„{losung.losungstext}"
+✨ „{losung.losungstext}"
 — {losung.losungsvers}
 🔗 {losung_url}
 
-💫 Lehrtext (NT):
-„{losung.lehrtext}"
+💫 „{losung.lehrtext}"
 — {losung.lehrtextvers}
 🔗 {lehrtext_url}
 
-{self.CLOSINGS[closing_idx]}
+{self.COPYRIGHT}
+🔗 {self.COPYRIGHT_URL}
+ℹ️ {self.INFO_URL}
 
-#Losung #Bibel #Herrnhut #Glaube #Elberfelder"""
+#DieLosungen #Bibel #Herrnhut"""
 
         return post
 

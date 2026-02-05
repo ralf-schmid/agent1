@@ -36,7 +36,6 @@ class TestPostFormatter:
         assert "✨" in post
         assert "💫" in post
         assert "🔗" in post
-        assert "🙏" in post
 
     def test_format_includes_verses(self, formatter: PostFormatter, sample_losung: Losung):
         post = formatter.format_post(sample_losung)
@@ -49,9 +48,21 @@ class TestPostFormatter:
 
     def test_format_includes_hashtags(self, formatter: PostFormatter, sample_losung: Losung):
         post = formatter.format_post(sample_losung)
-        assert "#Losung" in post
+        assert "#DieLosungen" in post
         assert "#Bibel" in post
-        assert "#Elberfelder" in post
+        assert "#Herrnhut" in post
+
+    def test_format_includes_copyright(self, formatter: PostFormatter, sample_losung: Losung):
+        """Prüft Copyright-Hinweis gemäß Nutzungsbedingungen losungen.de."""
+        post = formatter.format_post(sample_losung)
+        assert "© Evangelische Brüder-Unität – Herrnhuter Brüdergemeine" in post
+        assert "herrnhuter.de" in post
+        assert "losungen.de" in post
+
+    def test_format_uses_correct_name(self, formatter: PostFormatter, sample_losung: Losung):
+        """Prüft, dass 'Die Losungen' als Name verwendet wird."""
+        post = formatter.format_post(sample_losung)
+        assert "Die Losungen" in post
 
     def test_format_within_character_limit(
         self, formatter: PostFormatter, sample_losung: Losung

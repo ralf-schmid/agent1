@@ -227,24 +227,37 @@ https://www.losungen.de/
 ## Post-Format (Beispiel)
 
 ```
-🌅 Guten Morgen! Hier kommt die Losung für den 5. Februar 2026 📖
+📖 Die Losungen – 5. Februar 2026
 
-✨ Losung (AT):
-„Der HERR ist nahe allen, die ihn anrufen."
+✨ „Der HERR ist nahe allen, die ihn anrufen."
 — Psalm 145,18
 🔗 bibleserver.com/ELB/Psalm145,18
 
-💫 Lehrtext (NT):
-„Bittet, so wird euch gegeben."
+💫 „Bittet, so wird euch gegeben."
 — Matthäus 7,7
 🔗 bibleserver.com/ELB/Matthäus7,7
 
-Einen gesegneten Tag euch allen! 🙏
+© Evangelische Brüder-Unität – Herrnhuter Brüdergemeine
+🔗 https://www.herrnhuter.de
+ℹ️ https://www.losungen.de
 
-#Losung #Bibel #Herrnhut #Glaube #Elberfelder
+#DieLosungen #Bibel #Herrnhut
 ```
 
 **Zeichenlimit:** Mastodon erlaubt 500 Zeichen pro Post - das Format passt gut rein.
+
+---
+
+## Nutzungsbedingungen Losungen
+
+Gemäß den [Nutzungsbedingungen von losungen.de](https://www.losungen.de):
+
+- ✅ Name "Die Losungen" wird verwendet
+- ✅ Beide Bibelverse werden angezeigt (AT-Losungsvers + NT-Lehrtext)
+- ✅ Copyright-Hinweis: "© Evangelische Brüder-Unität – Herrnhuter Brüdergemeine"
+- ✅ Link auf www.herrnhuter.de
+- ✅ Link auf www.losungen.de für weitere Informationen
+- ✅ Kostenlose Bereitstellung (kein kommerzieller Zweck)
 
 ---
 
