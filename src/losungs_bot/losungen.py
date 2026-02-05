@@ -54,9 +54,29 @@ class LosungenParser:
             "losungen.xml",
         ]
 
+        logger.debug(
+            "searching_losungen_directory",
+            directory=str(directory),
+            patterns=patterns,
+        )
+
+        # Debug: Zeige alle Dateien im Verzeichnis
+        all_files = list(directory.glob("*"))
+        logger.debug(
+            "directory_contents",
+            files=[f.name for f in all_files],
+        )
+
         loaded_files = []
         for pattern in patterns:
-            for xml_file in directory.glob(pattern):
+            matching = list(directory.glob(pattern))
+            if matching:
+                logger.debug(
+                    "pattern_matched",
+                    pattern=pattern,
+                    files=[f.name for f in matching],
+                )
+            for xml_file in matching:
                 if xml_file not in loaded_files:
                     self._load_file(xml_file)
                     loaded_files.append(xml_file)
@@ -78,8 +98,30 @@ class LosungenParser:
 
             count_before = len(self._losungen)
 
-            # Das XML-Format der Herrnhuter Losungen
-            for losung_elem in root.findall(".//Losung"):
+            # Suche nach Losung-Elementen mit verschiedenen Schreibweisen
+            losung_elements = []
+
+            # Standard-Format: <Losung>
+            losung_elements.extend(root.findall(".//Losung"))
+
+            # Alternative: Kleingeschrieben
+            if not losung_elements:
+                losung_elements.extend(root.findall(".//losung"))
+
+            # Debug: Zeige die Root- und Kind-Elemente
+            if not losung_elements:
+                children = [child.tag for child in root]
+                logger.warning(
+                    "no_losung_elements_found",
+                    file=xml_file.name,
+                    root_tag=root.tag,
+                    child_tags=children[:5],  # Erste 5 Kinder
+                )
+                # Tiefere Suche: Zeige alle eindeutigen Tags
+                all_tags = {elem.tag for elem in root.iter()}
+                logger.debug("xml_all_tags", tags=sorted(all_tags))
+
+            for losung_elem in losung_elements:
                 losung = self._parse_losung(losung_elem)
                 if losung:
                     self._losungen[losung.datum] = losung

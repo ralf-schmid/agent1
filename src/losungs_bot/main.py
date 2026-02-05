@@ -1,6 +1,7 @@
 """Haupteinstiegspunkt für den Losungs-Bot."""
 
 import argparse
+import logging
 import sys
 
 import structlog
@@ -12,17 +13,24 @@ from losungs_bot.mastodon_client import MastodonClient
 from losungs_bot.post_formatter import PostFormatter
 from losungs_bot.scheduler import LosungScheduler, parse_time
 
-# Logging konfigurieren
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ],
-    wrapper_class=structlog.stdlib.BoundLogger,
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-)
+
+def configure_logging(debug: bool = False) -> None:
+    """Konfiguriert das Logging."""
+    log_level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(level=log_level)
+
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
 
 logger = structlog.get_logger()
 
@@ -154,8 +162,16 @@ def main() -> None:
         action="store_true",
         help="Zeigt den Post an, ohne ihn zu posten",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Aktiviert Debug-Logging für detaillierte Ausgaben",
+    )
 
     args = parser.parse_args()
+
+    # Logging konfigurieren
+    configure_logging(debug=args.debug)
 
     bot = LosungsBot()
 
