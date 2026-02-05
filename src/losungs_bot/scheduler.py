@@ -1,13 +1,12 @@
 """Scheduler für tägliche Losungs-Posts."""
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 from zoneinfo import ZoneInfo
 
+import structlog
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
-
-import structlog
 
 logger = structlog.get_logger()
 

@@ -1,8 +1,7 @@
 """Mastodon Client für den Losungs-Bot."""
 
-from mastodon import Mastodon
-
 import structlog
+from mastodon import Mastodon
 
 logger = structlog.get_logger()
 
