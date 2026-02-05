@@ -46,9 +46,9 @@ class PostFormatter:
         """
         datum_str = self._format_date(losung.datum)
 
-        # URLs generieren
-        losung_url = self.bible_links.generate_short_url(losung.losungsvers)
-        lehrtext_url = self.bible_links.generate_short_url(losung.lehrtextvers)
+        # URLs generieren (vollständige URLs mit https:// für klickbare Links)
+        losung_url = self.bible_links.generate_url(losung.losungsvers)
+        lehrtext_url = self.bible_links.generate_url(losung.lehrtextvers)
 
         post = f"""📖 Die Losungen – {datum_str}
 
