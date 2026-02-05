@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Beispiel-Datei für das Losungen-Format.
+  Die echte Datei muss von https://www.losungen.de/download/ heruntergeladen werden.
+  Dateiname sollte sein: losungen.xml (oder in .env anpassen)
+-->
+<FreeXml>
+  <Losungen>
+    <Losung>
+      <Datum>2026-02-05T00:00:00</Datum>
+      <Wtag>Donnerstag</Wtag>
+      <Losungstext>Der HERR ist nahe allen, die ihn anrufen, allen, die ihn in Wahrheit anrufen.</Losungstext>
+      <Losungsvers>Psalm 145,18</Losungsvers>
+      <Lehrtext>Bittet, so wird euch gegeben; sucht, so werdet ihr finden; klopft an, so wird euch aufgetan.</Lehrtext>
+      <Lehrtextvers>Matthäus 7,7</Lehrtextvers>
+    </Losung>
+    <Losung>
+      <Datum>2026-02-06T00:00:00</Datum>
+      <Wtag>Freitag</Wtag>
+      <Losungstext>Ich will dich segnen, und du sollst ein Segen sein.</Losungstext>
+      <Losungsvers>1. Mose 12,2</Losungsvers>
+      <Lehrtext>Einer trage des anderen Lasten, so werdet ihr das Gesetz des Christus erfüllen.</Lehrtext>
+      <Lehrtextvers>Galater 6,2</Lehrtextvers>
+    </Losung>
+  </Losungen>
+</FreeXml>

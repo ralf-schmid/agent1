@@ -390,7 +390,7 @@ MAX_REPLIES_PER_HOUR=10
 
 ## CI/CD Pipeline (GitHub Actions)
 
-Die Deployment-Pipeline baut das Docker-Image und deployed es automatisch:
+Die Deployment-Pipeline baut das Docker-Image, pusht es zu GitHub Container Registry und triggert den Webhook beim Provider:
 
 ```yaml
 # .github/workflows/deploy.yml
@@ -401,9 +401,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
@@ -412,49 +419,32 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.REGISTRY_URL }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.REGISTRY_URL }}/losungs-bot:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to Provider
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            docker pull ${{ secrets.REGISTRY_URL }}/losungs-bot:latest
-            docker stop losungs-bot || true
-            docker rm losungs-bot || true
-            docker run -d \
-              --name losungs-bot \
-              --restart unless-stopped \
-              --env-file /opt/losungs-bot/.env \
-              ${{ secrets.REGISTRY_URL }}/losungs-bot:latest
+      - name: Trigger Webhook
+        run: |
+          curl -X POST https://dashboard.dtcloud.de/v1/webhooks/native \
+          -H "Content-Type: application/json" \
+          -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "latest"}'
 ```
 
-### Benötigte GitHub Secrets
+### Keine zusätzlichen Secrets nötig! 🎉
 
-| Secret | Beschreibung |
-|--------|--------------|
-| `REGISTRY_URL` | Container Registry URL (z.B. ghcr.io, Docker Hub) |
-| `REGISTRY_USERNAME` | Registry Benutzername |
-| `REGISTRY_PASSWORD` | Registry Passwort/Token |
-| `DEPLOY_HOST` | SSH Host des Providers |
-| `DEPLOY_USER` | SSH Benutzername |
-| `DEPLOY_SSH_KEY` | Privater SSH-Schlüssel für Deployment |
+Die Pipeline nutzt GitHub Container Registry (ghcr.io) mit dem automatisch verfügbaren `GITHUB_TOKEN`. Der Provider wird per Webhook über neue Images informiert.
 
 ---
 
