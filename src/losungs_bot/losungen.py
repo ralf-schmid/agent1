@@ -101,23 +101,33 @@ class LosungenParser:
             # Suche nach Losung-Elementen mit verschiedenen Schreibweisen
             losung_elements = []
 
-            # Standard-Format: <Losung>
+            # Format 1: <Losung> (singular) - älteres Format
             losung_elements.extend(root.findall(".//Losung"))
 
-            # Alternative: Kleingeschrieben
+            # Format 2: <Losungen> (plural) - aktuelles losungen.de Format
+            # Hier ist jedes <Losungen>-Element ein Tageseintrag mit Datum, Losungstext, etc.
+            if not losung_elements:
+                for elem in root.findall(".//Losungen"):
+                    # Prüfe ob dieses Element die Tagesfelder direkt enthält
+                    if elem.find("Datum") is not None:
+                        losung_elements.append(elem)
+
+            # Format 3: Kleingeschrieben
             if not losung_elements:
                 losung_elements.extend(root.findall(".//losung"))
+                for elem in root.findall(".//losungen"):
+                    if elem.find("Datum") is not None:
+                        losung_elements.append(elem)
 
-            # Debug: Zeige die Root- und Kind-Elemente
+            # Debug: Zeige die Root- und Kind-Elemente wenn nichts gefunden
             if not losung_elements:
                 children = [child.tag for child in root]
                 logger.warning(
                     "no_losung_elements_found",
                     file=xml_file.name,
                     root_tag=root.tag,
-                    child_tags=children[:5],  # Erste 5 Kinder
+                    child_tags=children[:5],
                 )
-                # Tiefere Suche: Zeige alle eindeutigen Tags
                 all_tags = {elem.tag for elem in root.iter()}
                 logger.debug("xml_all_tags", tags=sorted(all_tags))
 
