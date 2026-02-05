@@ -132,11 +132,20 @@ https://www.losungen.de/
 - Verschiedene API-Wrapper verfügbar
 
 ### Bibelstellen-Links
-| Anbieter | URL-Format |
-|----------|------------|
-| BibleServer | `https://www.bibleserver.com/LUT/{Stelle}` |
-| Bible Gateway | `https://www.biblegateway.com/passage/?search={Stelle}&version=LUTH1545` |
-| Die-Bibel.de | `https://www.die-bibel.de/bibel/LU17/{Buch}/{Kapitel}` |
+
+**Gewählt: BibleServer mit Elberfelder Übersetzung** ✅
+
+| Format | Beispiel-URL |
+|--------|--------------|
+| Basis | `https://www.bibleserver.com/ELB/{Stelle}` |
+| Psalm 145,18 | `https://www.bibleserver.com/ELB/Psalm145,18` |
+| Matthäus 7,7 | `https://www.bibleserver.com/ELB/Matthäus7,7` |
+
+**Vorteile BibleServer:**
+- Deutsche Plattform (DSGVO-konform)
+- Elberfelder Übersetzung verfügbar
+- Kurze, lesbare URLs
+- Keine Tracking-Parameter nötig
 
 ---
 
@@ -218,20 +227,37 @@ https://www.losungen.de/
 ## Post-Format (Beispiel)
 
 ```
-📖 Losung für den 5. Februar 2026
+📖 Die Losungen – 5. Februar 2026
 
-Altes Testament:
-"Der HERR ist nahe allen, die ihn anrufen."
+✨ „Der HERR ist nahe allen, die ihn anrufen."
 — Psalm 145,18
-🔗 bibleserver.com/LUT/Psalm145,18
+🔗 bibleserver.com/ELB/Psalm145,18
 
-Neues Testament (Lehrtext):
-"Bittet, so wird euch gegeben."
+💫 „Bittet, so wird euch gegeben."
 — Matthäus 7,7
-🔗 bibleserver.com/LUT/Matthäus7,7
+🔗 bibleserver.com/ELB/Matthäus7,7
 
-#Losung #Bibel #Herrnhut #Glaube
+© Evangelische Brüder-Unität – Herrnhuter Brüdergemeine
+🔗 https://www.herrnhuter.de
+ℹ️ https://www.losungen.de
+
+#DieLosungen #Bibel #Herrnhut
 ```
+
+**Zeichenlimit:** Mastodon erlaubt 500 Zeichen pro Post - das Format passt gut rein.
+
+---
+
+## Nutzungsbedingungen Losungen
+
+Gemäß den [Nutzungsbedingungen von losungen.de](https://www.losungen.de):
+
+- ✅ Name "Die Losungen" wird verwendet
+- ✅ Beide Bibelverse werden angezeigt (AT-Losungsvers + NT-Lehrtext)
+- ✅ Copyright-Hinweis: "© Evangelische Brüder-Unität – Herrnhuter Brüdergemeine"
+- ✅ Link auf www.herrnhuter.de
+- ✅ Link auf www.losungen.de für weitere Informationen
+- ✅ Kostenlose Bereitstellung (kein kommerzieller Zweck)
 
 ---
 
@@ -300,12 +326,16 @@ fediverse-bibel-agent/
 
 ```env
 # Mastodon
-MASTODON_INSTANCE=https://botsin.space
+MASTODON_INSTANCE=https://mastodon.social
 MASTODON_ACCESS_TOKEN=xxx
 
 # Scheduling
 POST_TIME=06:00
 TIMEZONE=Europe/Berlin
+
+# Bibel
+BIBLE_TRANSLATION=ELB
+BIBLE_SERVER_BASE_URL=https://www.bibleserver.com
 
 # Phase 2
 ANTHROPIC_API_KEY=xxx
@@ -330,20 +360,23 @@ MAX_REPLIES_PER_HOUR=10
 ## Nächste Schritte
 
 ### Vor der Implementierung
-1. [ ] Mastodon-Account auf geeigneter Instanz erstellen
-2. [ ] API-Zugang (Access Token) generieren
+1. [x] Mastodon-Account auf mastodon.social erstellen (`@losungs_bot`)
+2. [ ] API-Zugang (Access Token) in Mastodon generieren
 3. [ ] Losungen-Lizenz/Nutzungsbedingungen prüfen
-4. [ ] VPS oder Hosting-Plattform auswählen
+4. [x] Hosting-Plattform auswählen (Docker beim Provider)
 5. [ ] Anthropic API Key für Phase 2 besorgen
+6. [ ] GitHub Secrets für CI/CD einrichten
 
 ### Implementierung Phase 1
-1. [ ] Projekt-Setup (Python, Dependencies)
-2. [ ] Losungen-Parser implementieren
-3. [ ] Mastodon-Client einrichten
-4. [ ] Post-Formatierung
-5. [ ] Scheduler einrichten
-6. [ ] Deployment auf VPS
-7. [ ] Monitoring einrichten
+1. [ ] Projekt-Setup (Python, Dependencies, pyproject.toml)
+2. [ ] Dockerfile erstellen
+3. [ ] Losungen-Parser implementieren
+4. [ ] BibleServer URL-Generator (Elberfelder)
+5. [ ] Mastodon-Client einrichten
+6. [ ] Post-Formatierung (persönlich, mit Emojis)
+7. [ ] Scheduler einrichten (täglich 6:00 Uhr)
+8. [ ] GitHub Actions Workflow erstellen
+9. [ ] Erstes Deployment & Test
 
 ### Implementierung Phase 2
 1. [ ] Mentions-Polling
@@ -354,21 +387,86 @@ MAX_REPLIES_PER_HOUR=10
 
 ---
 
-## Offene Fragen
+## ✅ Getroffene Entscheidungen
 
-1. **Welche Mastodon-Instanz?**
-   - Eigene oder bestehende (z.B. botsin.space)?
+| Aspekt | Entscheidung |
+|--------|--------------|
+| **Mastodon-Instanz** | `mastodon.social` |
+| **Account** | `@losungs_bot@mastodon.social` |
+| **Bibelquelle** | BibleServer |
+| **Bibelübersetzung** | Elberfelder (ELB) |
+| **Hosting** | Docker-Container beim Provider |
+| **Deployment** | GitHub Actions mit automatischem Deploy |
+| **Stil** | Persönlich & freundlich mit Emojis 😊 |
 
-2. **Losungen-Lizenz**
-   - Kommerzielle Nutzung? Namensnennung erforderlich?
+---
 
-3. **Bibelübersetzung**
-   - Luther 2017? Einheitsübersetzung? Elberfelder?
+## CI/CD Pipeline (GitHub Actions)
 
-4. **Ton des Bots**
-   - Formell oder persönlich?
-   - Emojis nutzen?
+Die Deployment-Pipeline baut das Docker-Image, pusht es zu GitHub Container Registry und triggert den Webhook beim Provider:
 
-5. **Phase 2 Umfang**
+```yaml
+# .github/workflows/deploy.yml
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Webhook
+        run: |
+          curl -X POST https://dashboard.dtcloud.de/v1/webhooks/native \
+          -H "Content-Type: application/json" \
+          -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "latest"}'
+```
+
+### Keine zusätzlichen Secrets nötig! 🎉
+
+Die Pipeline nutzt GitHub Container Registry (ghcr.io) mit dem automatisch verfügbaren `GITHUB_TOKEN`. Der Provider wird per Webhook über neue Images informiert.
+
+---
+
+## Offene Punkte
+
+1. **Losungen-Lizenz**
+   - [ ] Nutzungsbedingungen der Herrnhuter Brüdergemeine prüfen
+   - [ ] Ggf. Genehmigung einholen
+
+2. **Phase 2 Umfang**
    - Nur auf direkte Mentions reagieren?
    - Auch Hashtags beobachten?
