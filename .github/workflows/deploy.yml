@@ -1,0 +1,83 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: losungs-bot
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Provider
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            # Pull latest image
+            docker pull ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+
+            # Stop and remove existing container
+            docker stop ${{ env.IMAGE_NAME }} 2>/dev/null || true
+            docker rm ${{ env.IMAGE_NAME }} 2>/dev/null || true
+
+            # Run new container
+            docker run -d \
+              --name ${{ env.IMAGE_NAME }} \
+              --restart unless-stopped \
+              --env-file /opt/losungs-bot/.env \
+              -v /opt/losungs-bot/data:/app/data \
+              ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+
+            # Cleanup old images
+            docker image prune -f
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            # Wait for container to start
+            sleep 5
+
+            # Check if container is running
+            if docker ps | grep -q ${{ env.IMAGE_NAME }}; then
+              echo "✅ Container is running"
+              docker logs --tail 20 ${{ env.IMAGE_NAME }}
+            else
+              echo "❌ Container failed to start"
+              docker logs ${{ env.IMAGE_NAME }}
+              exit 1
+            fi

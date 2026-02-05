@@ -132,11 +132,20 @@ https://www.losungen.de/
 - Verschiedene API-Wrapper verfügbar
 
 ### Bibelstellen-Links
-| Anbieter | URL-Format |
-|----------|------------|
-| BibleServer | `https://www.bibleserver.com/LUT/{Stelle}` |
-| Bible Gateway | `https://www.biblegateway.com/passage/?search={Stelle}&version=LUTH1545` |
-| Die-Bibel.de | `https://www.die-bibel.de/bibel/LU17/{Buch}/{Kapitel}` |
+
+**Gewählt: BibleServer mit Elberfelder Übersetzung** ✅
+
+| Format | Beispiel-URL |
+|--------|--------------|
+| Basis | `https://www.bibleserver.com/ELB/{Stelle}` |
+| Psalm 145,18 | `https://www.bibleserver.com/ELB/Psalm145,18` |
+| Matthäus 7,7 | `https://www.bibleserver.com/ELB/Matthäus7,7` |
+
+**Vorteile BibleServer:**
+- Deutsche Plattform (DSGVO-konform)
+- Elberfelder Übersetzung verfügbar
+- Kurze, lesbare URLs
+- Keine Tracking-Parameter nötig
 
 ---
 
@@ -218,20 +227,24 @@ https://www.losungen.de/
 ## Post-Format (Beispiel)
 
 ```
-📖 Losung für den 5. Februar 2026
+🌅 Guten Morgen! Hier kommt die Losung für den 5. Februar 2026 📖
 
-Altes Testament:
-"Der HERR ist nahe allen, die ihn anrufen."
+✨ Losung (AT):
+„Der HERR ist nahe allen, die ihn anrufen."
 — Psalm 145,18
-🔗 bibleserver.com/LUT/Psalm145,18
+🔗 bibleserver.com/ELB/Psalm145,18
 
-Neues Testament (Lehrtext):
-"Bittet, so wird euch gegeben."
+💫 Lehrtext (NT):
+„Bittet, so wird euch gegeben."
 — Matthäus 7,7
-🔗 bibleserver.com/LUT/Matthäus7,7
+🔗 bibleserver.com/ELB/Matthäus7,7
 
-#Losung #Bibel #Herrnhut #Glaube
+Einen gesegneten Tag euch allen! 🙏
+
+#Losung #Bibel #Herrnhut #Glaube #Elberfelder
 ```
+
+**Zeichenlimit:** Mastodon erlaubt 500 Zeichen pro Post - das Format passt gut rein.
 
 ---
 
@@ -300,12 +313,16 @@ fediverse-bibel-agent/
 
 ```env
 # Mastodon
-MASTODON_INSTANCE=https://botsin.space
+MASTODON_INSTANCE=https://mastodon.social
 MASTODON_ACCESS_TOKEN=xxx
 
 # Scheduling
 POST_TIME=06:00
 TIMEZONE=Europe/Berlin
+
+# Bibel
+BIBLE_TRANSLATION=ELB
+BIBLE_SERVER_BASE_URL=https://www.bibleserver.com
 
 # Phase 2
 ANTHROPIC_API_KEY=xxx
@@ -330,20 +347,23 @@ MAX_REPLIES_PER_HOUR=10
 ## Nächste Schritte
 
 ### Vor der Implementierung
-1. [ ] Mastodon-Account auf geeigneter Instanz erstellen
-2. [ ] API-Zugang (Access Token) generieren
+1. [x] Mastodon-Account auf mastodon.social erstellen (`@losungs_bot`)
+2. [ ] API-Zugang (Access Token) in Mastodon generieren
 3. [ ] Losungen-Lizenz/Nutzungsbedingungen prüfen
-4. [ ] VPS oder Hosting-Plattform auswählen
+4. [x] Hosting-Plattform auswählen (Docker beim Provider)
 5. [ ] Anthropic API Key für Phase 2 besorgen
+6. [ ] GitHub Secrets für CI/CD einrichten
 
 ### Implementierung Phase 1
-1. [ ] Projekt-Setup (Python, Dependencies)
-2. [ ] Losungen-Parser implementieren
-3. [ ] Mastodon-Client einrichten
-4. [ ] Post-Formatierung
-5. [ ] Scheduler einrichten
-6. [ ] Deployment auf VPS
-7. [ ] Monitoring einrichten
+1. [ ] Projekt-Setup (Python, Dependencies, pyproject.toml)
+2. [ ] Dockerfile erstellen
+3. [ ] Losungen-Parser implementieren
+4. [ ] BibleServer URL-Generator (Elberfelder)
+5. [ ] Mastodon-Client einrichten
+6. [ ] Post-Formatierung (persönlich, mit Emojis)
+7. [ ] Scheduler einrichten (täglich 6:00 Uhr)
+8. [ ] GitHub Actions Workflow erstellen
+9. [ ] Erstes Deployment & Test
 
 ### Implementierung Phase 2
 1. [ ] Mentions-Polling
@@ -354,21 +374,96 @@ MAX_REPLIES_PER_HOUR=10
 
 ---
 
-## Offene Fragen
+## ✅ Getroffene Entscheidungen
 
-1. **Welche Mastodon-Instanz?**
-   - Eigene oder bestehende (z.B. botsin.space)?
+| Aspekt | Entscheidung |
+|--------|--------------|
+| **Mastodon-Instanz** | `mastodon.social` |
+| **Account** | `@losungs_bot@mastodon.social` |
+| **Bibelquelle** | BibleServer |
+| **Bibelübersetzung** | Elberfelder (ELB) |
+| **Hosting** | Docker-Container beim Provider |
+| **Deployment** | GitHub Actions mit automatischem Deploy |
+| **Stil** | Persönlich & freundlich mit Emojis 😊 |
 
-2. **Losungen-Lizenz**
-   - Kommerzielle Nutzung? Namensnennung erforderlich?
+---
 
-3. **Bibelübersetzung**
-   - Luther 2017? Einheitsübersetzung? Elberfelder?
+## CI/CD Pipeline (GitHub Actions)
 
-4. **Ton des Bots**
-   - Formell oder persönlich?
-   - Emojis nutzen?
+Die Deployment-Pipeline baut das Docker-Image und deployed es automatisch:
 
-5. **Phase 2 Umfang**
+```yaml
+# .github/workflows/deploy.yml
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.REGISTRY_URL }}/losungs-bot:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Provider
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.REGISTRY_URL }}/losungs-bot:latest
+            docker stop losungs-bot || true
+            docker rm losungs-bot || true
+            docker run -d \
+              --name losungs-bot \
+              --restart unless-stopped \
+              --env-file /opt/losungs-bot/.env \
+              ${{ secrets.REGISTRY_URL }}/losungs-bot:latest
+```
+
+### Benötigte GitHub Secrets
+
+| Secret | Beschreibung |
+|--------|--------------|
+| `REGISTRY_URL` | Container Registry URL (z.B. ghcr.io, Docker Hub) |
+| `REGISTRY_USERNAME` | Registry Benutzername |
+| `REGISTRY_PASSWORD` | Registry Passwort/Token |
+| `DEPLOY_HOST` | SSH Host des Providers |
+| `DEPLOY_USER` | SSH Benutzername |
+| `DEPLOY_SSH_KEY` | Privater SSH-Schlüssel für Deployment |
+
+---
+
+## Offene Punkte
+
+1. **Losungen-Lizenz**
+   - [ ] Nutzungsbedingungen der Herrnhuter Brüdergemeine prüfen
+   - [ ] Ggf. Genehmigung einholen
+
+2. **Phase 2 Umfang**
    - Nur auf direkte Mentions reagieren?
    - Auch Hashtags beobachten?
