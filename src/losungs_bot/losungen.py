@@ -30,14 +30,53 @@ class LosungenParser:
         self._load()
 
     def _load(self) -> None:
-        """Lädt und parst die XML-Datei."""
-        if not self.xml_path.exists():
-            logger.warning("losungen_file_not_found", path=str(self.xml_path))
-            return
+        """Lädt und parst die XML-Datei(en)."""
+        # Prüfe ob der Pfad ein Verzeichnis ist oder eine einzelne Datei
+        if self.xml_path.is_dir():
+            self._load_from_directory(self.xml_path)
+        elif self.xml_path.exists():
+            self._load_file(self.xml_path)
+        else:
+            # Versuche das übergeordnete Verzeichnis nach Losungen-Dateien zu durchsuchen
+            parent_dir = self.xml_path.parent
+            if parent_dir.exists():
+                self._load_from_directory(parent_dir)
+            else:
+                logger.warning("losungen_path_not_found", path=str(self.xml_path))
 
+    def _load_from_directory(self, directory: Path) -> None:
+        """Lädt alle Losungen-XML-Dateien aus einem Verzeichnis."""
+        # Suche nach verschiedenen Dateinamen-Mustern
+        patterns = [
+            "Losungen Free *.xml",
+            "Losungen*.xml",
+            "losungen*.xml",
+            "losungen.xml",
+        ]
+
+        loaded_files = []
+        for pattern in patterns:
+            for xml_file in directory.glob(pattern):
+                if xml_file not in loaded_files:
+                    self._load_file(xml_file)
+                    loaded_files.append(xml_file)
+
+        if not loaded_files:
+            logger.warning("no_losungen_files_found", directory=str(directory))
+        else:
+            logger.info(
+                "losungen_directory_loaded",
+                files=[f.name for f in loaded_files],
+                total_entries=len(self._losungen),
+            )
+
+    def _load_file(self, xml_file: Path) -> None:
+        """Lädt und parst eine einzelne XML-Datei."""
         try:
-            tree = ET.parse(self.xml_path)
+            tree = ET.parse(xml_file)
             root = tree.getroot()
+
+            count_before = len(self._losungen)
 
             # Das XML-Format der Herrnhuter Losungen
             for losung_elem in root.findall(".//Losung"):
@@ -45,10 +84,11 @@ class LosungenParser:
                 if losung:
                     self._losungen[losung.datum] = losung
 
-            logger.info("losungen_loaded", count=len(self._losungen))
+            count_added = len(self._losungen) - count_before
+            logger.info("losungen_file_loaded", file=xml_file.name, entries=count_added)
 
         except ET.ParseError as e:
-            logger.error("xml_parse_error", error=str(e))
+            logger.error("xml_parse_error", file=xml_file.name, error=str(e))
 
     def _parse_losung(self, elem: ET.Element) -> Losung | None:
         """Parst ein einzelnes Losung-Element."""
