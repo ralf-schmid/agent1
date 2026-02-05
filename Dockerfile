@@ -26,5 +26,10 @@ USER botuser
 HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import sys; sys.exit(0)"
 
-# Einstiegspunkt
+# Einstiegspunkt - kann mit Argumenten überschrieben werden
+# Standard: Scheduler-Modus
+# --once: Einmaliger Post
+# --dry-run: Vorschau ohne Post
+# shell: Startet eine Shell für Debugging
 ENTRYPOINT ["python", "-m", "losungs_bot.main"]
+CMD []
