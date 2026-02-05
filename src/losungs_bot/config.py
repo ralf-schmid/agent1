@@ -25,8 +25,9 @@ class Settings(BaseSettings):
     bible_translation: str = Field(default="ELB")
     bible_server_base_url: str = Field(default="https://www.bibleserver.com")
 
-    # Losungen
-    losungen_file: str = Field(default="data/losungen.xml")
+    # Losungen - kann Datei oder Verzeichnis sein
+    # Bei Verzeichnis werden alle "Losungen*.xml" Dateien geladen
+    losungen_file: str = Field(default="data/")
 
 
 def get_settings() -> Settings:
