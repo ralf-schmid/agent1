@@ -7,12 +7,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Python Dependencies installieren
-COPY pyproject.toml ./
+# Anwendungscode kopieren (für pip install benötigt)
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+# Python Dependencies und Paket installieren
 RUN pip install --no-cache-dir .
 
-# Anwendungscode kopieren
-COPY src/ ./src/
+# Daten-Verzeichnis kopieren
 COPY data/ ./data/
 
 # Nicht-Root-User erstellen
