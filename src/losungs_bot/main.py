@@ -210,7 +210,7 @@ class LosungsBot:
             return False
 
         # Quiz-Post formatieren
-        post_text = self.quiz_service.format_quiz_post(quiz)
+        post_text = self.quiz_service.format_quiz_post(quiz, losung.losungstext)
 
         # Poll posten
         result = self.mastodon.post_poll(
