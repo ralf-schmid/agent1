@@ -29,6 +29,9 @@ class QuizService:
     SYSTEM_PROMPT = """Du bist ein Experte für die Bibel und erstellst Quiz-Fragen.
 Deine Aufgabe ist es, eine interessante und lehrreiche Quiz-Frage zu einer Bibelstelle zu erstellen.
 
+WICHTIG: Die Bibelstelle (Buch, Kapitel, Vers) wird den Teilnehmern NICHT gezeigt!
+Du kannst also auch nach dem Buch oder dem Verfasser fragen.
+
 Regeln:
 1. Die Frage muss faktisch korrekt und verifizierbar sein
 2. Erstelle genau 4 Antwortmöglichkeiten
@@ -36,11 +39,12 @@ Regeln:
 4. Die falschen Antworten müssen plausibel klingen
 5. Die Frage soll zum Nachdenken anregen und lehrreich sein
 6. Mögliche Fragetypen:
-   - Welches Buch der Bibel? (bei weniger bekannten Stellen)
+   - Aus welchem Buch der Bibel stammt dieser Vers?
+   - Wer hat dieses Buch geschrieben/verfasst?
    - Historischer Kontext (Jahrhundert, Ort, Situation)
-   - Wer sprach diese Worte? (wenn ein Sprecher genannt wird)
-   - Was bedeutet ein bestimmtes Wort/Begriff?
-   - Zusammenhang mit anderen Bibelstellen
+   - Wer sprach diese Worte ursprünglich?
+   - Was bedeutet ein bestimmtes Wort/Begriff im Text?
+   - An wen waren diese Worte gerichtet?
 
 Antworte NUR mit validem JSON im folgenden Format:
 {
@@ -72,11 +76,10 @@ Antworte NUR mit validem JSON im folgenden Format:
         """
         user_prompt = f"""Erstelle eine Quiz-Frage zur folgenden Bibelstelle:
 
-Bibelstelle: {losung.losungsvers}
-Text: "{losung.losungstext}"
+Bibelstelle (wird den Teilnehmern NICHT gezeigt): {losung.losungsvers}
+Text (wird den Teilnehmern gezeigt): "{losung.losungstext}"
 
-Die Frage soll sich auf diese Stelle beziehen, kann aber auch den historischen
-oder theologischen Kontext einbeziehen."""
+Die Frage kann nach dem Buch, Verfasser, historischen Kontext oder der Bedeutung fragen."""
 
         try:
             response = self.client.messages.create(
@@ -113,23 +116,24 @@ oder theologischen Kontext einbeziehen."""
             logger.error("quiz_generation_failed", error=str(e))
             return None
 
-    def format_quiz_post(self, quiz: QuizQuestion) -> str:
+    def format_quiz_post(self, quiz: QuizQuestion, losung_text: str) -> str:
         """
         Formatiert die Quiz-Frage für einen Mastodon-Post.
 
         Args:
             quiz: Die Quiz-Frage
+            losung_text: Der Losungstext (ohne Quellenangabe)
 
         Returns:
             Formatierter Post-Text (ohne Poll-Optionen)
         """
-        return f"""📖 Bibelquiz zur Tageslosung
+        return f"""📖 Bibelquiz
+
+„{losung_text}"
 
 {quiz.question}
 
-(Bibelstelle: {quiz.losung_reference})
-
-#Bibelquiz #Losung #Bibel"""
+#Bibelquiz #Bibel"""
 
     def format_solution_post(
         self, quiz: QuizQuestion, poll_results: dict | None = None
