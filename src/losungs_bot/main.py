@@ -211,13 +211,14 @@ class LosungsBot:
                 job_name="Gottesdienst-Erinnerung",
             )
 
-        # Follower-Check (alle X Sekunden)
+        # Follower-Check (täglich)
         if self.follower_manager:
-            scheduler.schedule_interval_job(
+            follower_hour, follower_minute = parse_time(self.settings.follower_check_time)
+            scheduler.schedule_daily_post(
                 job_func=self.check_followers,
-                seconds=self.settings.follower_check_interval,
+                hour=follower_hour,
+                minute=follower_minute,
                 job_id="follower_check",
-                job_name="Follower-Prüfung",
             )
 
         logger.info(
@@ -314,6 +315,11 @@ def main() -> None:
         action="store_true",
         help="Postet die Gottesdienst-Erinnerung sofort",
     )
+    parser.add_argument(
+        "--test-welcome",
+        action="store_true",
+        help="Sendet Test-Willkommensnachricht an den Admin-Account",
+    )
 
     args = parser.parse_args()
 
@@ -322,7 +328,25 @@ def main() -> None:
 
     bot = LosungsBot()
 
-    if args.init_followers:
+    if args.test_welcome:
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+        admin = bot.settings.admin_notify_account
+        if not admin:
+            print("❌ ADMIN_NOTIFY_ACCOUNT nicht konfiguriert!")
+            sys.exit(1)
+        # Sende Willkommensnachricht an Admin
+        bot._init_follower_manager()
+        # Fake-Account für den Admin erstellen
+        test_account = {"acct": admin, "id": "test"}
+        success = bot.follower_manager.send_welcome_message(test_account)
+        if success:
+            print(f"✅ Test-Willkommensnachricht an @{admin} gesendet")
+        else:
+            print(f"❌ Fehler beim Senden der Nachricht")
+        sys.exit(0 if success else 1)
+    elif args.init_followers:
         if not bot.mastodon.verify_credentials():
             logger.error("invalid_mastodon_credentials")
             sys.exit(1)
