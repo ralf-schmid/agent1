@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     auto_follow_back: bool = Field(default=True)
     welcome_message_enabled: bool = Field(default=True)
     follower_check_interval: int = Field(default=300)  # Sekunden
+    follower_state_file: str = Field(default="data/follower_state.json")
 
     # Admin-Benachrichtigungen
     admin_notify_account: str | None = Field(default=None)

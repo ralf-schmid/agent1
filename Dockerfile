@@ -22,10 +22,9 @@ COPY data/ ./data/
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Nicht-Root-User erstellen
-RUN useradd --create-home --shell /bin/bash botuser \
-    && chown -R botuser:botuser /app
-USER botuser
+# Sicherstellen, dass data-Verzeichnis existiert und schreibbar ist
+# (wird ggf. durch Volume-Mount überschrieben)
+RUN mkdir -p /app/data
 
 # Healthcheck
 HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3 \
