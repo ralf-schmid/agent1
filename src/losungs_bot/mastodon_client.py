@@ -80,3 +80,82 @@ class MastodonClient:
         except Exception as e:
             logger.error("get_account_info_failed", error=str(e))
             return None
+
+    def post_poll(
+        self,
+        content: str,
+        options: list[str],
+        expires_in: int = 86400,
+        visibility: str = "public",
+    ) -> dict | None:
+        """
+        Postet einen Status mit Umfrage (Poll).
+
+        Args:
+            content: Der Text des Posts
+            options: Liste der Antwortmöglichkeiten (2-4 Optionen)
+            expires_in: Dauer in Sekunden (default: 24 Stunden)
+            visibility: Sichtbarkeit (public, unlisted, private, direct)
+
+        Returns:
+            Das erstellte Status-Objekt mit Poll oder None bei Fehler
+        """
+        try:
+            status = self._client.status_post(
+                status=content,
+                poll={
+                    "options": options,
+                    "expires_in": expires_in,
+                },
+                visibility=visibility,
+            )
+            logger.info(
+                "poll_posted",
+                status_id=status["id"],
+                poll_id=status.get("poll", {}).get("id"),
+                options_count=len(options),
+                expires_in_hours=expires_in / 3600,
+            )
+            return status
+        except Exception as e:
+            logger.error("poll_post_failed", error=str(e))
+            return None
+
+    def get_poll(self, poll_id: str) -> dict | None:
+        """
+        Ruft die Ergebnisse einer Umfrage ab.
+
+        Args:
+            poll_id: Die ID der Umfrage
+
+        Returns:
+            Das Poll-Objekt mit Ergebnissen oder None bei Fehler
+        """
+        try:
+            poll = self._client.poll(poll_id)
+            logger.info(
+                "poll_fetched",
+                poll_id=poll_id,
+                votes_count=poll.get("votes_count", 0),
+                expired=poll.get("expired", False),
+            )
+            return poll
+        except Exception as e:
+            logger.error("poll_fetch_failed", poll_id=poll_id, error=str(e))
+            return None
+
+    def get_status(self, status_id: str) -> dict | None:
+        """
+        Ruft einen Status ab.
+
+        Args:
+            status_id: Die ID des Status
+
+        Returns:
+            Das Status-Objekt oder None bei Fehler
+        """
+        try:
+            return self._client.status(status_id)
+        except Exception as e:
+            logger.error("status_fetch_failed", status_id=status_id, error=str(e))
+            return None

@@ -51,6 +51,14 @@ class Settings(BaseSettings):
         default="https://open.spotify.com/show/12L3SnnMI5JMDJVtQCqBxh"
     )
 
+    # Bibelquiz
+    quiz_enabled: bool = Field(default=False)  # Deaktiviert bis API-Key gesetzt
+    quiz_day: int = Field(default=2)  # 0=Mo, 2=Mi, 6=So
+    quiz_time: str = Field(default="18:00")
+    quiz_poll_duration: int = Field(default=86400)  # 24 Stunden in Sekunden
+    quiz_state_file: str = Field(default="data/quiz_state.json")
+    anthropic_api_key: str | None = Field(default=None)
+
 
 def get_settings() -> Settings:
     """Erstellt und gibt die Einstellungen zurück."""
