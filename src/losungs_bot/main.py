@@ -13,6 +13,7 @@ from losungs_bot.follower_manager import FollowerManager
 from losungs_bot.losungen import LosungenParser
 from losungs_bot.mastodon_client import MastodonClient
 from losungs_bot.post_formatter import PostFormatter
+from losungs_bot.quiz_service import QuizService, QuizStateManager
 from losungs_bot.scheduler import LosungScheduler, parse_time
 
 
@@ -63,6 +64,8 @@ class LosungsBot:
         # Optionale Komponenten
         self.church_reminder = None
         self.follower_manager = None
+        self.quiz_service = None
+        self.quiz_state = None
 
         logger.info("losungs_bot_initialized")
 
@@ -88,6 +91,21 @@ class LosungsBot:
                 welcome_msg=self.settings.welcome_message_enabled,
                 notify_account=self.settings.admin_notify_account,
             )
+
+    def _init_quiz_service(self) -> None:
+        """Initialisiert den Quiz-Service."""
+        if self.settings.quiz_enabled and self.settings.anthropic_api_key:
+            self.quiz_service = QuizService(api_key=self.settings.anthropic_api_key)
+            self.quiz_state = QuizStateManager(
+                state_file=self.settings.quiz_state_file
+            )
+            logger.info(
+                "quiz_service_enabled",
+                quiz_day=self.settings.quiz_day,
+                quiz_time=self.settings.quiz_time,
+            )
+        elif self.settings.quiz_enabled and not self.settings.anthropic_api_key:
+            logger.warning("quiz_enabled_but_no_api_key")
 
     def post_daily_losung(self) -> bool:
         """Postet die heutige Losung."""
@@ -166,6 +184,98 @@ class LosungsBot:
         if count > 0:
             logger.info("new_followers_processed", count=count)
 
+    def post_quiz(self) -> bool:
+        """Postet ein neues Quiz basierend auf der Tageslosung."""
+        if not self.quiz_service or not self.quiz_state:
+            logger.warning("quiz_service_not_initialized")
+            return False
+
+        # Prüfen ob noch ein Quiz aktiv ist
+        if self.quiz_state.has_active_quiz():
+            logger.warning("quiz_already_active")
+            return False
+
+        logger.info("generating_quiz")
+
+        # Tageslosung laden
+        losung = self.losungen_parser.get_today()
+        if not losung:
+            logger.error("no_losung_for_quiz")
+            return False
+
+        # Quiz generieren
+        quiz = self.quiz_service.generate_quiz(losung)
+        if not quiz:
+            logger.error("quiz_generation_failed")
+            return False
+
+        # Quiz-Post formatieren
+        post_text = self.quiz_service.format_quiz_post(quiz)
+
+        # Poll posten
+        result = self.mastodon.post_poll(
+            content=post_text,
+            options=quiz.options,
+            expires_in=self.settings.quiz_poll_duration,
+        )
+
+        if not result:
+            logger.error("quiz_post_failed")
+            return False
+
+        # Status und Poll-ID speichern
+        poll_id = result.get("poll", {}).get("id")
+        if poll_id:
+            self.quiz_state.save_active_quiz(
+                quiz=quiz,
+                status_id=str(result["id"]),
+                poll_id=str(poll_id),
+            )
+            logger.info(
+                "quiz_posted",
+                status_id=result["id"],
+                poll_id=poll_id,
+            )
+            return True
+
+        logger.error("quiz_no_poll_id")
+        return False
+
+    def post_quiz_solution(self) -> bool:
+        """Postet die Auflösung des aktiven Quiz."""
+        if not self.quiz_service or not self.quiz_state:
+            logger.warning("quiz_service_not_initialized")
+            return False
+
+        # Aktives Quiz laden
+        active = self.quiz_state.get_active_quiz()
+        if not active:
+            logger.info("no_active_quiz_for_solution")
+            return False
+
+        quiz, status_id, poll_id = active
+        logger.info("posting_quiz_solution", poll_id=poll_id)
+
+        # Poll-Ergebnisse abrufen
+        poll_results = self.mastodon.get_poll(poll_id)
+
+        # Auflösung formatieren
+        solution_text = self.quiz_service.format_solution_post(quiz, poll_results)
+
+        # Als Antwort auf den Quiz-Post posten
+        result = self.mastodon.post_status(
+            content=solution_text,
+            in_reply_to_id=status_id,
+        )
+
+        if result:
+            logger.info("quiz_solution_posted", status_id=result["id"])
+            self.quiz_state.clear_active_quiz()
+            return True
+
+        logger.error("quiz_solution_failed")
+        return False
+
     def run_scheduled(self) -> None:
         """Startet den Bot im Scheduled-Modus."""
         from datetime import datetime
@@ -187,6 +297,7 @@ class LosungsBot:
         # Optionale Komponenten initialisieren
         self._init_church_reminder()
         self._init_follower_manager()
+        self._init_quiz_service()
 
         # Scheduler einrichten
         scheduler = LosungScheduler(timezone=self.settings.timezone)
@@ -221,6 +332,29 @@ class LosungsBot:
                 job_id="follower_check",
             )
 
+        # Bibelquiz (wöchentlich)
+        if self.quiz_service:
+            quiz_hour, quiz_minute = parse_time(self.settings.quiz_time)
+            # Quiz posten
+            scheduler.schedule_weekly_job(
+                job_func=self.post_quiz,
+                day_of_week=self.settings.quiz_day,
+                hour=quiz_hour,
+                minute=quiz_minute,
+                job_id="bible_quiz",
+                job_name="Bibelquiz",
+            )
+            # Quiz-Auflösung (nächster Tag, gleiche Uhrzeit)
+            solution_day = (self.settings.quiz_day + 1) % 7
+            scheduler.schedule_weekly_job(
+                job_func=self.post_quiz_solution,
+                day_of_week=solution_day,
+                hour=quiz_hour,
+                minute=quiz_minute,
+                job_id="quiz_solution",
+                job_name="Quiz-Auflösung",
+            )
+
         logger.info(
             "bot_ready",
             post_time=self.settings.post_time,
@@ -228,6 +362,7 @@ class LosungsBot:
             misfire_grace_time_hours=scheduler.MISFIRE_GRACE_TIME / 3600,
             church_reminder=self.settings.church_reminder_enabled,
             follower_features=self.follower_manager is not None,
+            quiz_enabled=self.quiz_service is not None,
         )
 
         # Scheduler starten (blockiert)
@@ -320,6 +455,16 @@ def main() -> None:
         action="store_true",
         help="Sendet Test-Willkommensnachricht an den Admin-Account",
     )
+    parser.add_argument(
+        "--test-quiz",
+        action="store_true",
+        help="Postet ein Bibelquiz sofort (benötigt ANTHROPIC_API_KEY)",
+    )
+    parser.add_argument(
+        "--quiz-solution",
+        action="store_true",
+        help="Postet die Auflösung des aktiven Quiz",
+    )
 
     args = parser.parse_args()
 
@@ -358,6 +503,34 @@ def main() -> None:
             sys.exit(1)
         bot._init_church_reminder()
         success = bot.post_church_reminder()
+        sys.exit(0 if success else 1)
+    elif args.test_quiz:
+        if not bot.settings.anthropic_api_key:
+            print("❌ ANTHROPIC_API_KEY nicht konfiguriert!")
+            sys.exit(1)
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+        bot._init_quiz_service()
+        success = bot.post_quiz()
+        if success:
+            print("✅ Quiz gepostet")
+        else:
+            print("❌ Quiz konnte nicht gepostet werden")
+        sys.exit(0 if success else 1)
+    elif args.quiz_solution:
+        if not bot.settings.anthropic_api_key:
+            print("❌ ANTHROPIC_API_KEY nicht konfiguriert!")
+            sys.exit(1)
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+        bot._init_quiz_service()
+        success = bot.post_quiz_solution()
+        if success:
+            print("✅ Quiz-Auflösung gepostet")
+        else:
+            print("❌ Keine aktive Quiz-Frage oder Fehler beim Posten")
         sys.exit(0 if success else 1)
     elif args.dry_run:
         bot.dry_run()
