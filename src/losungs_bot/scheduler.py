@@ -70,6 +70,7 @@ class LosungScheduler:
         job_func: Callable,
         hour: int = 6,
         minute: int = 0,
+        job_id: str = "daily_losung_post",
     ) -> None:
         """
         Plant einen täglichen Job.
@@ -78,6 +79,7 @@ class LosungScheduler:
             job_func: Die auszuführende Funktion
             hour: Stunde (0-23)
             minute: Minute (0-59)
+            job_id: Eindeutige Job-ID
         """
         trigger = CronTrigger(
             hour=hour,
@@ -88,14 +90,15 @@ class LosungScheduler:
         self.scheduler.add_job(
             job_func,
             trigger=trigger,
-            id="daily_losung_post",
-            name="Tägliche Losung posten",
+            id=job_id,
+            name=job_id,
             replace_existing=True,
             misfire_grace_time=self.MISFIRE_GRACE_TIME,
         )
 
         logger.info(
             "daily_job_scheduled",
+            job_id=job_id,
             hour=hour,
             minute=minute,
             timezone=str(self.timezone),
