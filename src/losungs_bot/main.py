@@ -65,25 +65,45 @@ class LosungsBot:
             logger.error("no_losung_for_today")
             return False
 
-        # Post formatieren
-        post_content = self.formatter.format_post(losung)
-        post_length = self.formatter.get_post_length(post_content)
+        # Post formatieren (automatisches Splitting wenn zu lang)
+        formatted = self.formatter.format_post(losung)
+        main_length = len(formatted.main_post)
 
-        logger.info("post_formatted", length=post_length)
+        logger.info(
+            "post_formatted",
+            main_length=main_length,
+            needs_reply=formatted.needs_reply,
+        )
 
         # Länge prüfen
-        if not self.formatter.validate_length(post_content):
-            logger.error("post_too_long", length=post_length, max=500)
+        if not self.formatter.validate_length(formatted.main_post):
+            logger.error("post_too_long", length=main_length, max=500)
             return False
 
-        # Posten
-        result = self.mastodon.post_status(post_content)
-        if result:
-            logger.info("losung_posted_successfully", status_id=result["id"])
-            return True
+        # Hauptpost posten
+        result = self.mastodon.post_status(formatted.main_post)
+        if not result:
+            logger.error("losung_post_failed")
+            return False
 
-        logger.error("losung_post_failed")
-        return False
+        logger.info("losung_posted_successfully", status_id=result["id"])
+
+        # Copyright-Antwort posten wenn nötig
+        if formatted.needs_reply:
+            reply_result = self.mastodon.post_status(
+                formatted.copyright_reply,
+                in_reply_to_id=result["id"],
+            )
+            if reply_result:
+                logger.info(
+                    "copyright_reply_posted",
+                    reply_id=reply_result["id"],
+                    parent_id=result["id"],
+                )
+            else:
+                logger.warning("copyright_reply_failed", parent_id=result["id"])
+
+        return True
 
     def run_scheduled(self) -> None:
         """Startet den Bot im Scheduled-Modus."""
@@ -143,15 +163,24 @@ class LosungsBot:
             print("❌ Keine Losung für heute gefunden!")
             sys.exit(1)
 
-        post_content = self.formatter.format_post(losung)
-        post_length = self.formatter.get_post_length(post_content)
+        formatted = self.formatter.format_post(losung)
+        main_length = len(formatted.main_post)
 
         print("\n" + "=" * 50)
         print("📝 VORSCHAU (Dry Run)")
         print("=" * 50)
-        print(post_content)
+        print(formatted.main_post)
         print("=" * 50)
-        print(f"📏 Länge: {post_length}/500 Zeichen")
+        print(f"📏 Länge: {main_length}/500 Zeichen")
+
+        if formatted.needs_reply:
+            print("\n" + "-" * 50)
+            print("↩️  ANTWORT (Copyright)")
+            print("-" * 50)
+            print(formatted.copyright_reply)
+            print("-" * 50)
+            print(f"📏 Länge: {len(formatted.copyright_reply)}/500 Zeichen")
+
         print("=" * 50 + "\n")
 
 

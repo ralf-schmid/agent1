@@ -24,13 +24,19 @@ class MastodonClient:
         )
         logger.info("mastodon_client_initialized", instance=instance_url)
 
-    def post_status(self, content: str, visibility: str = "public") -> dict | None:
+    def post_status(
+        self,
+        content: str,
+        visibility: str = "public",
+        in_reply_to_id: str | None = None,
+    ) -> dict | None:
         """
         Postet einen neuen Status (Toot).
 
         Args:
             content: Der Text des Posts
             visibility: Sichtbarkeit (public, unlisted, private, direct)
+            in_reply_to_id: Optional - ID eines Posts auf den geantwortet wird
 
         Returns:
             Das erstellte Status-Objekt oder None bei Fehler
@@ -39,12 +45,14 @@ class MastodonClient:
             status = self._client.status_post(
                 status=content,
                 visibility=visibility,
+                in_reply_to_id=in_reply_to_id,
             )
             logger.info(
                 "status_posted",
                 status_id=status["id"],
                 visibility=visibility,
                 content_length=len(content),
+                is_reply=in_reply_to_id is not None,
             )
             return status
         except Exception as e:
