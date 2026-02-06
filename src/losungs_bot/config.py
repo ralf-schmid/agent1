@@ -59,6 +59,16 @@ class Settings(BaseSettings):
     quiz_state_file: str = Field(default="data/quiz_state.json")
     anthropic_api_key: str | None = Field(default=None)
 
+    # Reflexionsfrage (Mittagsimpuls)
+    reflection_enabled: bool = Field(default=False)  # Benötigt API-Key
+    reflection_time: str = Field(default="12:00")
+
+    # Interaktive Features
+    mentions_enabled: bool = Field(default=True)  # Auf Erwähnungen reagieren
+    mentions_check_interval: int = Field(default=300)  # Alle 5 Minuten
+    favorites_reaction_enabled: bool = Field(default=False)  # DM bei Favorit
+    notification_state_file: str = Field(default="data/notification_state.json")
+
 
 def get_settings() -> Settings:
     """Erstellt und gibt die Einstellungen zurück."""
