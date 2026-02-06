@@ -344,7 +344,7 @@ def main() -> None:
         if success:
             print(f"✅ Test-Willkommensnachricht an @{admin} gesendet")
         else:
-            print(f"❌ Fehler beim Senden der Nachricht")
+            print("❌ Fehler beim Senden der Nachricht")
         sys.exit(0 if success else 1)
     elif args.init_followers:
         if not bot.mastodon.verify_credentials():
