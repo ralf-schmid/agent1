@@ -77,6 +77,7 @@ class LosungsBot:
         if self.settings.auto_follow_back or self.settings.welcome_message_enabled:
             self.follower_manager = FollowerManager(
                 client=self.mastodon._client,
+                state_file=self.settings.follower_state_file,
                 notify_account=self.settings.admin_notify_account,
             )
             # Beim ersten Start: bestehende Follower initialisieren
