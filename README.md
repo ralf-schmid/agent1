@@ -1,15 +1,51 @@
 # Losungs-Bot 📖
 
-Ein Mastodon-Bot, der täglich die Herrnhuter Losungen postet.
+Ein interaktiver Mastodon-Bot, der täglich die Herrnhuter Losungen postet und auf Nachrichten reagiert.
+
+## Profiltext für Mastodon
+
+> 📖 Tägliche Herrnhuter Losungen für dein Fediverse!
+>
+> 📅 06:00 → Tageslosung
+> 💭 12:00 → Reflexionsfrage
+> 📖 Mi 18:00 → Bibelquiz
+> ⛪ Sa 17:00 → Gottesdienst-Erinnerung
+>
+> 💬 Schreib mir: "hilfe", "losung", "quiz" oder eine Bibelstelle wie "Joh 3,16"
+>
+> 🤖 Bot von @ralf_schmid@chaos.social
+> 🔗 github.com/ralf-schmid/losungs-bot
 
 ## Features
 
+### Automatische Posts
 - 📅 **Tägliche Losung** um 06:00 Uhr mit Bibelstellen-Links
+- 💭 **Reflexionsfrage** um 12:00 Uhr (KI-generierter Mittagsimpuls)
+- 📖 **Bibelquiz** mittwochs um 18:00 Uhr (KI-generierte Fragen als Umfrage)
 - ⛪ **Gottesdienst-Erinnerung** samstags um 17:00 Uhr
-- 📖 **Bibelquiz** mittwochs um 18:00 Uhr (KI-generierte Fragen)
+- 🎧 **Podcast-Links** (Apple/Spotify) in den Posts
+
+### Interaktive Features
+- 💬 **Erwähnungen** – Reagiert auf Nachrichten mit Befehlen
+- 📖 **Bibelstellen** – Generiert Links für Verse wie "Joh 3,16"
+- ❓ **Quiz auf Abruf** – Startet ein persönliches Quiz
+- 🎲 **Zufällige Losung** – Verse aus dem aktuellen Jahr
+
+### Follower-Management
 - 👋 **Willkommensnachricht** für neue Follower
 - 🔄 **Auto-Follow-Back** mit Admin-Benachrichtigung
-- 🎧 **Podcast-Links** (Apple/Spotify) in den Posts
+
+## Befehle (Erwähnungen)
+
+Schreibe dem Bot eine Nachricht mit einem der folgenden Befehle:
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `hilfe` / `help` / `?` | Liste aller Befehle |
+| `losung` / `heute` / `vers` | Heutige Tageslosung |
+| `zufall` / `random` | Zufällige Losung aus diesem Jahr |
+| `quiz` | Startet ein persönliches Bibelquiz |
+| `Joh 3,16` | Link zur Bibelstelle (beliebige Bibelstelle) |
 
 ## Installation
 
@@ -46,7 +82,10 @@ losungs-bot --debug      # Debug-Logging
 losungs-bot --church-reminder   # Gottesdienst-Erinnerung posten
 losungs-bot --init-followers    # Follower-Liste initialisieren
 losungs-bot --test-welcome      # Test-Willkommensnachricht
+
+# Quiz-Optionen
 losungs-bot --test-quiz         # Quiz sofort posten
+losungs-bot --dry-run-quiz      # Quiz-Vorschau ohne Post
 losungs-bot --quiz-solution     # Quiz-Auflösung posten
 ```
 
@@ -106,7 +145,7 @@ Alle Einstellungen erfolgen über Umgebungsvariablen (`.env`-Datei):
 | `PODCAST_APPLE` | Apple Podcasts URL | [Link](https://podcasts.apple.com/de/podcast/die-losungen/id1434728607) |
 | `PODCAST_SPOTIFY` | Spotify URL | [Link](https://open.spotify.com/show/12L3SnnMI5JMDJVtQCqBxh) |
 
-### Bibelquiz (optional)
+### Bibelquiz (optional, benötigt Anthropic API)
 
 | Variable | Beschreibung | Default |
 |----------|--------------|---------|
@@ -115,6 +154,27 @@ Alle Einstellungen erfolgen über Umgebungsvariablen (`.env`-Datei):
 | `QUIZ_TIME` | Uhrzeit | `18:00` |
 | `QUIZ_POLL_DURATION` | Poll-Dauer in Sekunden | `86400` |
 | `QUIZ_STATE_FILE` | Pfad zur State-Datei | `data/quiz_state.json` |
+
+### Reflexionsfrage (optional, benötigt Anthropic API)
+
+| Variable | Beschreibung | Default |
+|----------|--------------|---------|
+| `REFLECTION_ENABLED` | Reflexionsfrage aktivieren | `false` |
+| `REFLECTION_TIME` | Uhrzeit | `12:00` |
+
+### Interaktive Features
+
+| Variable | Beschreibung | Default |
+|----------|--------------|---------|
+| `MENTIONS_ENABLED` | Auf Erwähnungen reagieren | `true` |
+| `MENTIONS_CHECK_INTERVAL` | Prüf-Intervall in Sekunden | `300` |
+| `FAVORITES_REACTION_ENABLED` | DM bei Favorit senden | `false` |
+| `NOTIFICATION_STATE_FILE` | Pfad zur State-Datei | `data/notification_state.json` |
+
+### Anthropic API (für Quiz und Reflexion)
+
+| Variable | Beschreibung | Default |
+|----------|--------------|---------|
 | `ANTHROPIC_API_KEY` | API-Key für Claude | - |
 
 ## Losungen-Daten
@@ -133,9 +193,11 @@ Platziere die Dateien im `data/`-Verzeichnis. Der Bot lädt automatisch alle pas
 |-----|------|--------|
 | Täglich | 06:00 | Tageslosung posten |
 | Täglich | 08:00 | Neue Follower prüfen |
-| Samstag | 17:00 | Gottesdienst-Erinnerung |
+| Täglich | 12:00 | Reflexionsfrage posten |
+| Alle 5 Min | - | Erwähnungen prüfen |
 | Mittwoch | 18:00 | Bibelquiz posten |
 | Donnerstag | 18:00 | Quiz-Auflösung |
+| Samstag | 17:00 | Gottesdienst-Erinnerung |
 
 ## Copyright
 

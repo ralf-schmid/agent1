@@ -17,16 +17,17 @@ class FollowerManager:
 
 Schön, dass du dabei bist! 📖
 
-Jeden Morgen um 6:00 Uhr poste ich die Herrnhuter Tageslosung mit:
-✨ Altes Testament Vers
-💫 Neues Testament Vers
-🔗 Links zu BibleServer
+📅 Täglich 6:00 → Tageslosung
+💭 Täglich 12:00 → Reflexionsfrage
+📖 Mittwochs 18:00 → Bibelquiz
+⛪ Samstags 17:00 → Gottesdienst-Erinnerung
 
-Samstags gibt es außerdem eine Gottesdienst-Erinnerung für den Sonntag.
-
-🎧 Die Losungen als Podcast:
-🍎 https://podcasts.apple.com/de/podcast/die-losungen/id1434728607
-🟢 https://open.spotify.com/show/12L3SnnMI5JMDJVtQCqBxh
+💬 Schreib mir:
+• "hilfe" → Was ich kann
+• "losung" → Heutige Losung
+• "zufall" → Zufälliger Vers
+• "quiz" → Starte ein Quiz
+• "Joh 3,16" → Link zur Bibelstelle
 
 Gottes Segen! 🙏"""
 

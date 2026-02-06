@@ -12,8 +12,10 @@ from losungs_bot.config import get_settings
 from losungs_bot.follower_manager import FollowerManager
 from losungs_bot.losungen import LosungenParser
 from losungs_bot.mastodon_client import MastodonClient
+from losungs_bot.mention_handler import MentionHandler
 from losungs_bot.post_formatter import PostFormatter
 from losungs_bot.quiz_service import QuizService, QuizStateManager
+from losungs_bot.reflection_service import ReflectionService
 from losungs_bot.scheduler import LosungScheduler, parse_time
 
 
@@ -66,6 +68,9 @@ class LosungsBot:
         self.follower_manager = None
         self.quiz_service = None
         self.quiz_state = None
+        self.reflection_service = None
+        self.mention_handler = None
+        self._last_notification_id: str | None = None
 
         logger.info("losungs_bot_initialized")
 
@@ -106,6 +111,30 @@ class LosungsBot:
             )
         elif self.settings.quiz_enabled and not self.settings.anthropic_api_key:
             logger.warning("quiz_enabled_but_no_api_key")
+
+    def _init_reflection_service(self) -> None:
+        """Initialisiert den Reflexions-Service."""
+        if self.settings.reflection_enabled and self.settings.anthropic_api_key:
+            self.reflection_service = ReflectionService(
+                api_key=self.settings.anthropic_api_key
+            )
+            logger.info(
+                "reflection_service_enabled",
+                reflection_time=self.settings.reflection_time,
+            )
+        elif self.settings.reflection_enabled and not self.settings.anthropic_api_key:
+            logger.warning("reflection_enabled_but_no_api_key")
+
+    def _init_mention_handler(self) -> None:
+        """Initialisiert den Mention-Handler."""
+        if self.settings.mentions_enabled:
+            self.mention_handler = MentionHandler(
+                mastodon_client=self.mastodon,
+                losungen_parser=self.losungen_parser,
+                bible_links=self.bible_links,
+                quiz_service=self.quiz_service,
+            )
+            logger.info("mention_handler_enabled")
 
     def post_daily_losung(self) -> bool:
         """Postet die heutige Losung."""
@@ -276,6 +305,93 @@ class LosungsBot:
         logger.error("quiz_solution_failed")
         return False
 
+    def post_reflection(self) -> bool:
+        """Postet die tägliche Reflexionsfrage."""
+        if not self.reflection_service:
+            logger.warning("reflection_service_not_initialized")
+            return False
+
+        logger.info("posting_reflection")
+
+        losung = self.losungen_parser.get_today()
+        if not losung:
+            logger.error("no_losung_for_reflection")
+            return False
+
+        question = self.reflection_service.generate_reflection(losung)
+        if not question:
+            logger.error("reflection_generation_failed")
+            return False
+
+        post_text = self.reflection_service.format_reflection_post(losung, question)
+
+        result = self.mastodon.post_status(post_text)
+        if result:
+            logger.info("reflection_posted", status_id=result["id"])
+            return True
+
+        logger.error("reflection_post_failed")
+        return False
+
+    def process_mentions(self) -> None:
+        """Verarbeitet neue Erwähnungen."""
+        if not self.mention_handler:
+            return
+
+        # Erwähnungen abrufen
+        notifications = self.mastodon.get_notifications(
+            types=["mention"],
+            since_id=self._last_notification_id,
+            limit=20,
+        )
+
+        if not notifications:
+            return
+
+        # Neueste ID speichern
+        self._last_notification_id = str(notifications[0]["id"])
+
+        for notification in reversed(notifications):  # Älteste zuerst
+            try:
+                self.mention_handler.process_mention(notification)
+                self.mastodon.dismiss_notification(str(notification["id"]))
+            except Exception as e:
+                logger.error(
+                    "mention_processing_failed",
+                    notification_id=notification["id"],
+                    error=str(e),
+                )
+
+        logger.info("mentions_processed", count=len(notifications))
+
+    def process_favorites(self) -> None:
+        """Reagiert auf neue Favoriten mit einer DM."""
+        if not self.settings.favorites_reaction_enabled:
+            return
+
+        notifications = self.mastodon.get_notifications(
+            types=["favourite"],
+            since_id=self._last_notification_id,
+            limit=20,
+        )
+
+        if not notifications:
+            return
+
+        for notification in notifications:
+            account = notification.get("account", {})
+            username = account.get("acct", "")
+
+            if username:
+                self.mastodon.send_direct_message(
+                    username=username,
+                    content="Danke für dein ❤️! Schön, dass dir der Beitrag gefällt. "
+                    "Schreib mir 'hilfe' wenn du wissen möchtest, was ich alles kann. 🙏",
+                )
+                self.mastodon.dismiss_notification(str(notification["id"]))
+
+        logger.info("favorites_processed", count=len(notifications))
+
     def run_scheduled(self) -> None:
         """Startet den Bot im Scheduled-Modus."""
         from datetime import datetime
@@ -298,6 +414,8 @@ class LosungsBot:
         self._init_church_reminder()
         self._init_follower_manager()
         self._init_quiz_service()
+        self._init_reflection_service()
+        self._init_mention_handler()
 
         # Scheduler einrichten
         scheduler = LosungScheduler(timezone=self.settings.timezone)
@@ -355,6 +473,27 @@ class LosungsBot:
                 job_name="Quiz-Auflösung",
             )
 
+        # Reflexionsfrage (täglich)
+        if self.reflection_service:
+            reflection_hour, reflection_minute = parse_time(
+                self.settings.reflection_time
+            )
+            scheduler.schedule_daily_post(
+                job_func=self.post_reflection,
+                hour=reflection_hour,
+                minute=reflection_minute,
+                job_id="daily_reflection",
+            )
+
+        # Mentions-Check (alle X Sekunden)
+        if self.mention_handler:
+            scheduler.schedule_interval_job(
+                job_func=self.process_mentions,
+                seconds=self.settings.mentions_check_interval,
+                job_id="mentions_check",
+                job_name="Erwähnungen prüfen",
+            )
+
         logger.info(
             "bot_ready",
             post_time=self.settings.post_time,
@@ -363,6 +502,8 @@ class LosungsBot:
             church_reminder=self.settings.church_reminder_enabled,
             follower_features=self.follower_manager is not None,
             quiz_enabled=self.quiz_service is not None,
+            reflection_enabled=self.reflection_service is not None,
+            mentions_enabled=self.mention_handler is not None,
         )
 
         # Scheduler starten (blockiert)

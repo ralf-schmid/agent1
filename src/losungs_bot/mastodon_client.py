@@ -159,3 +159,90 @@ class MastodonClient:
         except Exception as e:
             logger.error("status_fetch_failed", status_id=status_id, error=str(e))
             return None
+
+    def get_notifications(
+        self,
+        types: list[str] | None = None,
+        since_id: str | None = None,
+        limit: int = 40,
+    ) -> list[dict]:
+        """
+        Ruft Benachrichtigungen ab.
+
+        Args:
+            types: Filter nach Typen (mention, favourite, reblog, follow)
+            since_id: Nur Notifications nach dieser ID
+            limit: Maximale Anzahl
+
+        Returns:
+            Liste von Notifications
+        """
+        try:
+            notifications = self._client.notifications(
+                types=types,
+                since_id=since_id,
+                limit=limit,
+            )
+            logger.info(
+                "notifications_fetched",
+                count=len(notifications),
+                types=types,
+            )
+            return notifications
+        except Exception as e:
+            logger.error("notifications_fetch_failed", error=str(e))
+            return []
+
+    def dismiss_notification(self, notification_id: str) -> bool:
+        """
+        Markiert eine Benachrichtigung als gelesen.
+
+        Args:
+            notification_id: Die ID der Notification
+
+        Returns:
+            True wenn erfolgreich
+        """
+        try:
+            self._client.notifications_dismiss(notification_id)
+            return True
+        except Exception as e:
+            logger.error(
+                "notification_dismiss_failed",
+                notification_id=notification_id,
+                error=str(e),
+            )
+            return False
+
+    def send_direct_message(self, username: str, content: str) -> dict | None:
+        """
+        Sendet eine Direktnachricht an einen Benutzer.
+
+        Args:
+            username: Der Benutzername (mit oder ohne @)
+            content: Die Nachricht
+
+        Returns:
+            Das Status-Objekt oder None bei Fehler
+        """
+        # Sicherstellen dass @ vorhanden ist
+        if not username.startswith("@"):
+            username = f"@{username}"
+
+        message = f"{username} {content}"
+
+        try:
+            status = self._client.status_post(
+                status=message,
+                visibility="direct",
+            )
+            logger.info(
+                "direct_message_sent",
+                to_user=username,
+                status_id=status["id"],
+            )
+            return status
+        except Exception as e:
+            logger.error("direct_message_failed", to_user=username, error=str(e))
+            return None
+
