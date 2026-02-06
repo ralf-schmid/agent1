@@ -9,6 +9,7 @@ import structlog
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 logger = structlog.get_logger()
 
@@ -98,6 +99,83 @@ class LosungScheduler:
             hour=hour,
             minute=minute,
             timezone=str(self.timezone),
+        )
+
+    def schedule_weekly_job(
+        self,
+        job_func: Callable,
+        day_of_week: int,
+        hour: int,
+        minute: int,
+        job_id: str,
+        job_name: str,
+    ) -> None:
+        """
+        Plant einen wöchentlichen Job.
+
+        Args:
+            job_func: Die auszuführende Funktion
+            day_of_week: Wochentag (0=Montag, 6=Sonntag)
+            hour: Stunde (0-23)
+            minute: Minute (0-59)
+            job_id: Eindeutige Job-ID
+            job_name: Anzeigename des Jobs
+        """
+        trigger = CronTrigger(
+            day_of_week=day_of_week,
+            hour=hour,
+            minute=minute,
+            timezone=self.timezone,
+        )
+
+        self.scheduler.add_job(
+            job_func,
+            trigger=trigger,
+            id=job_id,
+            name=job_name,
+            replace_existing=True,
+            misfire_grace_time=self.MISFIRE_GRACE_TIME,
+        )
+
+        days = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+        logger.info(
+            "weekly_job_scheduled",
+            job_id=job_id,
+            day=days[day_of_week],
+            hour=hour,
+            minute=minute,
+        )
+
+    def schedule_interval_job(
+        self,
+        job_func: Callable,
+        seconds: int,
+        job_id: str,
+        job_name: str,
+    ) -> None:
+        """
+        Plant einen periodischen Job.
+
+        Args:
+            job_func: Die auszuführende Funktion
+            seconds: Intervall in Sekunden
+            job_id: Eindeutige Job-ID
+            job_name: Anzeigename des Jobs
+        """
+        trigger = IntervalTrigger(seconds=seconds)
+
+        self.scheduler.add_job(
+            job_func,
+            trigger=trigger,
+            id=job_id,
+            name=job_name,
+            replace_existing=True,
+        )
+
+        logger.info(
+            "interval_job_scheduled",
+            job_id=job_id,
+            interval_seconds=seconds,
         )
 
     def run_now(self, job_func: Callable) -> None:
