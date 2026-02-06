@@ -7,7 +7,9 @@ import sys
 import structlog
 
 from losungs_bot.bible_links import BibleLinkGenerator
+from losungs_bot.church_service import ChurchServiceReminder
 from losungs_bot.config import get_settings
+from losungs_bot.follower_manager import FollowerManager
 from losungs_bot.losungen import LosungenParser
 from losungs_bot.mastodon_client import MastodonClient
 from losungs_bot.post_formatter import PostFormatter
@@ -32,6 +34,7 @@ def configure_logging(debug: bool = False) -> None:
         cache_logger_on_first_use=True,
     )
 
+
 logger = structlog.get_logger()
 
 
@@ -47,13 +50,43 @@ class LosungsBot:
             base_url=self.settings.bible_server_base_url,
             translation=self.settings.bible_translation,
         )
-        self.formatter = PostFormatter(self.bible_links)
+        self.formatter = PostFormatter(
+            self.bible_links,
+            podcast_apple=self.settings.podcast_apple,
+            podcast_spotify=self.settings.podcast_spotify,
+        )
         self.mastodon = MastodonClient(
             instance_url=self.settings.mastodon_instance,
             access_token=self.settings.mastodon_access_token,
         )
 
+        # Optionale Komponenten
+        self.church_reminder = None
+        self.follower_manager = None
+
         logger.info("losungs_bot_initialized")
+
+    def _init_church_reminder(self) -> None:
+        """Initialisiert die Gottesdienst-Erinnerung."""
+        if self.settings.church_reminder_enabled:
+            self.church_reminder = ChurchServiceReminder()
+            logger.info("church_reminder_enabled")
+
+    def _init_follower_manager(self) -> None:
+        """Initialisiert den Follower-Manager."""
+        if self.settings.auto_follow_back or self.settings.welcome_message_enabled:
+            self.follower_manager = FollowerManager(
+                client=self.mastodon._client,
+                notify_account=self.settings.admin_notify_account,
+            )
+            # Beim ersten Start: bestehende Follower initialisieren
+            self.follower_manager.initialize_known_followers()
+            logger.info(
+                "follower_manager_enabled",
+                auto_follow=self.settings.auto_follow_back,
+                welcome_msg=self.settings.welcome_message_enabled,
+                notify_account=self.settings.admin_notify_account,
+            )
 
     def post_daily_losung(self) -> bool:
         """Postet die heutige Losung."""
@@ -105,6 +138,33 @@ class LosungsBot:
 
         return True
 
+    def post_church_reminder(self) -> bool:
+        """Postet die Gottesdienst-Erinnerung."""
+        if not self.church_reminder:
+            logger.warning("church_reminder_not_initialized")
+            return False
+
+        logger.info("posting_church_reminder")
+
+        reminder_text = self.church_reminder.format_saturday_reminder()
+
+        result = self.mastodon.post_status(reminder_text)
+        if result:
+            logger.info("church_reminder_posted", status_id=result["id"])
+            return True
+
+        logger.error("church_reminder_failed")
+        return False
+
+    def check_followers(self) -> None:
+        """Prüft auf neue Follower und verarbeitet sie."""
+        if not self.follower_manager:
+            return
+
+        count = self.follower_manager.process_new_followers()
+        if count > 0:
+            logger.info("new_followers_processed", count=count)
+
     def run_scheduled(self) -> None:
         """Startet den Bot im Scheduled-Modus."""
         from datetime import datetime
@@ -123,21 +183,49 @@ class LosungsBot:
             logger.error("invalid_mastodon_credentials")
             sys.exit(1)
 
+        # Optionale Komponenten initialisieren
+        self._init_church_reminder()
+        self._init_follower_manager()
+
         # Scheduler einrichten
         scheduler = LosungScheduler(timezone=self.settings.timezone)
         hour, minute = parse_time(self.settings.post_time)
 
+        # Tägliche Losung
         scheduler.schedule_daily_post(
             job_func=self.post_daily_losung,
             hour=hour,
             minute=minute,
         )
 
+        # Gottesdienst-Erinnerung (Samstag)
+        if self.settings.church_reminder_enabled:
+            church_hour, church_minute = parse_time(self.settings.church_reminder_time)
+            scheduler.schedule_weekly_job(
+                job_func=self.post_church_reminder,
+                day_of_week=self.settings.church_reminder_day,
+                hour=church_hour,
+                minute=church_minute,
+                job_id="church_reminder",
+                job_name="Gottesdienst-Erinnerung",
+            )
+
+        # Follower-Check (alle X Sekunden)
+        if self.follower_manager:
+            scheduler.schedule_interval_job(
+                job_func=self.check_followers,
+                seconds=self.settings.follower_check_interval,
+                job_id="follower_check",
+                job_name="Follower-Prüfung",
+            )
+
         logger.info(
             "bot_ready",
             post_time=self.settings.post_time,
             timezone=self.settings.timezone,
             misfire_grace_time_hours=scheduler.MISFIRE_GRACE_TIME / 3600,
+            church_reminder=self.settings.church_reminder_enabled,
+            follower_features=self.follower_manager is not None,
         )
 
         # Scheduler starten (blockiert)
@@ -167,7 +255,7 @@ class LosungsBot:
         main_length = len(formatted.main_post)
 
         print("\n" + "=" * 50)
-        print("📝 VORSCHAU (Dry Run)")
+        print("📝 VORSCHAU - Tägliche Losung")
         print("=" * 50)
         print(formatted.main_post)
         print("=" * 50)
@@ -175,11 +263,22 @@ class LosungsBot:
 
         if formatted.needs_reply:
             print("\n" + "-" * 50)
-            print("↩️  ANTWORT (Copyright)")
+            print("↩️  ANTWORT (Copyright + Podcast)")
             print("-" * 50)
             print(formatted.copyright_reply)
             print("-" * 50)
             print(f"📏 Länge: {len(formatted.copyright_reply)}/500 Zeichen")
+
+        # Gottesdienst-Vorschau
+        if self.settings.church_reminder_enabled:
+            self._init_church_reminder()
+            print("\n" + "=" * 50)
+            print("⛪ VORSCHAU - Gottesdienst-Erinnerung (Samstag)")
+            print("=" * 50)
+            reminder = self.church_reminder.format_saturday_reminder()
+            print(reminder)
+            print("=" * 50)
+            print(f"📏 Länge: {len(reminder)}/500 Zeichen")
 
         print("=" * 50 + "\n")
 
@@ -204,6 +303,16 @@ def main() -> None:
         action="store_true",
         help="Aktiviert Debug-Logging für detaillierte Ausgaben",
     )
+    parser.add_argument(
+        "--init-followers",
+        action="store_true",
+        help="Initialisiert die Liste bekannter Follower (ohne Nachrichten)",
+    )
+    parser.add_argument(
+        "--church-reminder",
+        action="store_true",
+        help="Postet die Gottesdienst-Erinnerung sofort",
+    )
 
     args = parser.parse_args()
 
@@ -212,7 +321,20 @@ def main() -> None:
 
     bot = LosungsBot()
 
-    if args.dry_run:
+    if args.init_followers:
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+        bot._init_follower_manager()
+        print("✅ Follower initialisiert")
+    elif args.church_reminder:
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+        bot._init_church_reminder()
+        success = bot.post_church_reminder()
+        sys.exit(0 if success else 1)
+    elif args.dry_run:
         bot.dry_run()
     elif args.once:
         bot.run_once()

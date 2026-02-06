@@ -29,6 +29,27 @@ class Settings(BaseSettings):
     # Bei Verzeichnis werden alle "Losungen*.xml" Dateien geladen
     losungen_file: str = Field(default="data/")
 
+    # Gottesdienst-Erinnerung (Samstag)
+    church_reminder_enabled: bool = Field(default=True)
+    church_reminder_time: str = Field(default="17:00")
+    church_reminder_day: int = Field(default=5)  # 0=Mo, 5=Sa, 6=So
+
+    # Follower-Interaktionen
+    auto_follow_back: bool = Field(default=True)
+    welcome_message_enabled: bool = Field(default=True)
+    follower_check_interval: int = Field(default=300)  # Sekunden
+
+    # Admin-Benachrichtigungen
+    admin_notify_account: str | None = Field(default=None)
+
+    # Podcast-Links
+    podcast_apple: str = Field(
+        default="https://podcasts.apple.com/de/podcast/die-losungen/id1434728607"
+    )
+    podcast_spotify: str = Field(
+        default="https://open.spotify.com/show/12L3SnnMI5JMDJVtQCqBxh"
+    )
+
 
 def get_settings() -> Settings:
     """Erstellt und gibt die Einstellungen zurück."""
