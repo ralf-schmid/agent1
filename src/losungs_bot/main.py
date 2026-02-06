@@ -87,7 +87,16 @@ class LosungsBot:
 
     def run_scheduled(self) -> None:
         """Startet den Bot im Scheduled-Modus."""
-        logger.info("starting_scheduled_mode")
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo(self.settings.timezone)
+        current_time = datetime.now(tz)
+
+        logger.info(
+            "starting_scheduled_mode",
+            current_time=current_time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        )
 
         # Credentials prüfen
         if not self.mastodon.verify_credentials():
@@ -104,12 +113,11 @@ class LosungsBot:
             minute=minute,
         )
 
-        next_run = scheduler.get_next_run_time()
         logger.info(
             "bot_ready",
             post_time=self.settings.post_time,
             timezone=self.settings.timezone,
-            next_run=next_run.isoformat() if next_run else "unknown",
+            misfire_grace_time_hours=scheduler.MISFIRE_GRACE_TIME / 3600,
         )
 
         # Scheduler starten (blockiert)
