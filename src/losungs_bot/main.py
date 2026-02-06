@@ -465,6 +465,11 @@ def main() -> None:
         action="store_true",
         help="Postet die Auflösung des aktiven Quiz",
     )
+    parser.add_argument(
+        "--dry-run-quiz",
+        action="store_true",
+        help="Generiert ein Quiz und zeigt es an, ohne zu posten",
+    )
 
     args = parser.parse_args()
 
@@ -504,6 +509,55 @@ def main() -> None:
         bot._init_church_reminder()
         success = bot.post_church_reminder()
         sys.exit(0 if success else 1)
+    elif args.dry_run_quiz:
+        if not bot.settings.anthropic_api_key:
+            print("❌ ANTHROPIC_API_KEY nicht konfiguriert!")
+            sys.exit(1)
+        from losungs_bot.quiz_service import QuizService
+
+        print("\n" + "=" * 50)
+        print("📖 VORSCHAU - Bibelquiz")
+        print("=" * 50)
+
+        losung = bot.losungen_parser.get_today()
+        if not losung:
+            print("❌ Keine Losung für heute gefunden!")
+            sys.exit(1)
+
+        print(f"\n📜 Tageslosung: {losung.losungsvers}")
+        print(f'   "{losung.losungstext}"\n')
+        print("-" * 50)
+        print("⏳ Generiere Quiz mit Claude...")
+
+        quiz_service = QuizService(api_key=bot.settings.anthropic_api_key)
+        quiz = quiz_service.generate_quiz(losung)
+
+        if not quiz:
+            print("❌ Quiz-Generierung fehlgeschlagen!")
+            sys.exit(1)
+
+        post_text = quiz_service.format_quiz_post(quiz, losung.losungstext)
+        solution_text = quiz_service.format_solution_post(quiz)
+
+        print("\n" + "=" * 50)
+        print("📝 QUIZ-POST:")
+        print("=" * 50)
+        print(post_text)
+        print("-" * 50)
+        print("Antwortmöglichkeiten:")
+        for i, opt in enumerate(quiz.options):
+            marker = "✓" if i == quiz.correct_index else " "
+            print(f"  [{marker}] {opt}")
+        print("=" * 50)
+        print(f"📏 Länge: {len(post_text)}/500 Zeichen")
+
+        print("\n" + "=" * 50)
+        print("📝 AUFLÖSUNG (wird am nächsten Tag gepostet):")
+        print("=" * 50)
+        print(solution_text)
+        print("=" * 50)
+        print(f"📏 Länge: {len(solution_text)}/500 Zeichen\n")
+
     elif args.test_quiz:
         if not bot.settings.anthropic_api_key:
             print("❌ ANTHROPIC_API_KEY nicht konfiguriert!")
