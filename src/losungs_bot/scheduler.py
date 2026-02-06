@@ -1,18 +1,50 @@
 """Scheduler für tägliche Losungs-Posts."""
 
+import logging
 from collections.abc import Callable
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import structlog
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 logger = structlog.get_logger()
 
+# APScheduler Logging aktivieren
+logging.getLogger("apscheduler").setLevel(logging.DEBUG)
+
+
+def job_listener(event):
+    """Listener für APScheduler Job-Events."""
+    if event.exception:
+        logger.error(
+            "job_failed",
+            job_id=event.job_id,
+            exception=str(event.exception),
+        )
+    elif hasattr(event, "job_id"):
+        if event.code == EVENT_JOB_MISSED:
+            logger.warning(
+                "job_missed",
+                job_id=event.job_id,
+                scheduled_time=str(event.scheduled_run_time),
+            )
+        else:
+            logger.info(
+                "job_executed",
+                job_id=event.job_id,
+            )
+
 
 class LosungScheduler:
     """Scheduler für das tägliche Posten der Losungen."""
+
+    # Toleranz für verpasste Jobs: 2 Stunden
+    # Wenn der Bot innerhalb von 2 Stunden nach der geplanten Zeit startet,
+    # wird der Job trotzdem ausgeführt
+    MISFIRE_GRACE_TIME = 7200  # 2 Stunden in Sekunden
 
     def __init__(self, timezone: str = "Europe/Berlin"):
         """
@@ -23,6 +55,13 @@ class LosungScheduler:
         """
         self.timezone = ZoneInfo(timezone)
         self.scheduler = BlockingScheduler(timezone=self.timezone)
+
+        # Event-Listener für Logging hinzufügen
+        self.scheduler.add_listener(
+            job_listener,
+            EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED,
+        )
+
         logger.info("scheduler_initialized", timezone=timezone)
 
     def schedule_daily_post(
@@ -51,6 +90,7 @@ class LosungScheduler:
             id="daily_losung_post",
             name="Tägliche Losung posten",
             replace_existing=True,
+            misfire_grace_time=self.MISFIRE_GRACE_TIME,
         )
 
         logger.info(
