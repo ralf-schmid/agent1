@@ -72,9 +72,8 @@ Antworte NUR mit validem JSON im folgenden Format:
         """
         user_prompt = f"""Erstelle eine Quiz-Frage zur folgenden Bibelstelle:
 
-Buch: {losung.ot_book}
-Kapitel und Vers: {losung.ot_reference}
-Text: "{losung.ot_text}"
+Bibelstelle: {losung.losungsvers}
+Text: "{losung.losungstext}"
 
 Die Frage soll sich auf diese Stelle beziehen, kann aber auch den historischen
 oder theologischen Kontext einbeziehen."""
@@ -96,7 +95,7 @@ oder theologischen Kontext einbeziehen."""
                 options=quiz_data["options"],
                 correct_index=quiz_data["correct_index"],
                 explanation=quiz_data["explanation"],
-                losung_reference=f"{losung.ot_book} {losung.ot_reference}",
+                losung_reference=losung.losungsvers,
             )
 
             logger.info(
