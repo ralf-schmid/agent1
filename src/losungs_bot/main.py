@@ -70,7 +70,10 @@ class LosungsBot:
         self.quiz_state = None
         self.reflection_service = None
         self.mention_handler = None
-        self._last_notification_id: str | None = None
+
+        # Separate Notification-IDs für verschiedene Typen
+        self._last_mention_id: str | None = None
+        self._last_favorite_id: str | None = None
 
         logger.info("losungs_bot_initialized")
 
@@ -341,7 +344,7 @@ class LosungsBot:
         # Erwähnungen abrufen
         notifications = self.mastodon.get_notifications(
             types=["mention"],
-            since_id=self._last_notification_id,
+            since_id=self._last_mention_id,
             limit=20,
         )
 
@@ -349,7 +352,7 @@ class LosungsBot:
             return
 
         # Neueste ID speichern
-        self._last_notification_id = str(notifications[0]["id"])
+        self._last_mention_id = str(notifications[0]["id"])
 
         for notification in reversed(notifications):  # Älteste zuerst
             try:
@@ -371,12 +374,15 @@ class LosungsBot:
 
         notifications = self.mastodon.get_notifications(
             types=["favourite"],
-            since_id=self._last_notification_id,
+            since_id=self._last_favorite_id,
             limit=20,
         )
 
         if not notifications:
             return
+
+        # Neueste ID speichern
+        self._last_favorite_id = str(notifications[0]["id"])
 
         for notification in notifications:
             account = notification.get("account", {})
