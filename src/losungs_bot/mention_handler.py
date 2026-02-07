@@ -19,18 +19,18 @@ logger = structlog.get_logger()
 class MentionHandler:
     """Verarbeitet Erwähnungen und reagiert auf Befehle."""
 
-    # Bekannte Befehle
-    COMMANDS = {
-        "hilfe": "help",
-        "help": "help",
-        "?": "help",
-        "vers": "verse_today",
-        "losung": "verse_today",
-        "heute": "verse_today",
-        "zufall": "verse_random",
-        "random": "verse_random",
-        "quiz": "quiz",
-    }
+    # Bekannte Befehle - Reihenfolge wichtig! Spezifische zuerst.
+    COMMANDS = [
+        ("zufall", "verse_random"),
+        ("random", "verse_random"),
+        ("quiz", "quiz"),
+        ("hilfe", "help"),
+        ("help", "help"),
+        ("?", "help"),
+        ("vers", "verse_today"),
+        ("losung", "verse_today"),
+        ("heute", "verse_today"),
+    ]
 
     # Regex für Bibelstellen (z.B. "Johannes 3,16" oder "1. Mose 1,1")
     VERSE_PATTERN = re.compile(
@@ -127,8 +127,8 @@ class MentionHandler:
             return success
 
     def _detect_command(self, content: str) -> str | None:
-        """Erkennt einen Befehl im Text."""
-        for keyword, command in self.COMMANDS.items():
+        """Erkennt einen Befehl im Text. Spezifische Befehle haben Priorität."""
+        for keyword, command in self.COMMANDS:
             if keyword in content:
                 return command
         return None
