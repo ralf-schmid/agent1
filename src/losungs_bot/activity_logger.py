@@ -59,6 +59,23 @@ class ActivityLogger:
         """Gibt den aktuellen Timestamp formatiert zurück."""
         return datetime.now(self.timezone).strftime("%Y-%m-%d %H:%M:%S")
 
+    def _sanitize_csv_value(self, value: str) -> str:
+        """
+        Sanitiert einen Wert gegen CSV Injection.
+
+        Verhindert, dass Werte die mit =, +, -, @, Tab oder CR beginnen
+        in Tabellenkalkulationen als Formeln interpretiert werden.
+
+        Args:
+            value: Der zu sanitierende Wert
+
+        Returns:
+            Sanitierter Wert (mit führendem Apostroph wenn nötig)
+        """
+        if value and value[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return f"'{value}"
+        return value
+
     def log(self, activity_type: ActivityType, description: str) -> None:
         """
         Loggt eine Aktivität in die CSV-Datei.
@@ -68,7 +85,9 @@ class ActivityLogger:
             description: Beschreibung der Aktivität
         """
         timestamp = self._get_timestamp()
-        row = [timestamp, activity_type.value, description]
+        # Beschreibung sanitieren gegen CSV Injection
+        safe_description = self._sanitize_csv_value(description)
+        row = [timestamp, activity_type.value, safe_description]
 
         try:
             with open(self.log_file, "a", newline="", encoding="utf-8") as f:

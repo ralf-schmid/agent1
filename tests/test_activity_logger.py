@@ -153,6 +153,78 @@ class TestActivityLogger:
             assert log_file.parent.exists()
 
 
+class TestCsvInjectionPrevention:
+    """Tests für CSV Injection Absicherung."""
+
+    def test_sanitize_equals_sign(self):
+        """Test dass = am Anfang escaped wird."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = Path(tmpdir) / "test_log.csv"
+            logger = ActivityLogger(log_file=str(log_file))
+
+            logger.log_new_follower("=CMD|'/C calc'!A0")
+
+            with open(log_file, encoding="utf-8") as f:
+                content = f.read()
+
+            # Muss mit Apostroph escaped sein
+            assert "'=CMD" in content
+
+    def test_sanitize_plus_sign(self):
+        """Test dass + am Anfang escaped wird."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = Path(tmpdir) / "test_log.csv"
+            logger = ActivityLogger(log_file=str(log_file))
+
+            logger.log_new_follower("+49123456")
+
+            with open(log_file, encoding="utf-8") as f:
+                content = f.read()
+
+            assert "'+49123456" in content
+
+    def test_sanitize_minus_sign(self):
+        """Test dass - am Anfang escaped wird."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = Path(tmpdir) / "test_log.csv"
+            logger = ActivityLogger(log_file=str(log_file))
+
+            logger.log_new_follower("-user@instance")
+
+            with open(log_file, encoding="utf-8") as f:
+                content = f.read()
+
+            assert "'-user@instance" in content
+
+    def test_sanitize_at_sign(self):
+        """Test dass @ am Anfang escaped wird."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = Path(tmpdir) / "test_log.csv"
+            logger = ActivityLogger(log_file=str(log_file))
+
+            logger.log_new_follower("@SUM(A1:A10)")
+
+            with open(log_file, encoding="utf-8") as f:
+                content = f.read()
+
+            assert "'@SUM" in content
+
+    def test_normal_text_not_escaped(self):
+        """Test dass normaler Text nicht escaped wird."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = Path(tmpdir) / "test_log.csv"
+            logger = ActivityLogger(log_file=str(log_file))
+
+            logger.log_new_follower("user@mastodon.social")
+
+            with open(log_file, encoding="utf-8") as f:
+                content = f.read()
+
+            # Kein führendes Apostroph
+            assert "user@mastodon.social" in content
+            assert "'user@mastodon.social" not in content
+
+
 class TestActivityType:
     """Tests für die ActivityType Enum."""
 
