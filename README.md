@@ -35,6 +35,10 @@ Ein interaktiver Mastodon-Bot, der täglich die Herrnhuter Losungen postet und a
 - 👋 **Willkommensnachricht** für neue Follower
 - 🔄 **Auto-Follow-Back** mit Admin-Benachrichtigung
 
+### Aktivitäts-Logging
+- 📊 **CSV-Log** aller Bot-Aktivitäten in `data/activity_log.csv`
+- Protokolliert: Losungen, Quiz, GoDi-Erinnerungen, neue Follower, Erwähnungen
+
 ## Befehle (Erwähnungen)
 
 Schreibe dem Bot eine Nachricht mit einem der folgenden Befehle:
@@ -176,6 +180,29 @@ Alle Einstellungen erfolgen über Umgebungsvariablen (`.env`-Datei):
 | Variable | Beschreibung | Default |
 |----------|--------------|---------|
 | `ANTHROPIC_API_KEY` | API-Key für Claude | - |
+
+## Aktivitäts-Log
+
+Der Bot protokolliert alle Aktivitäten in `data/activity_log.csv` im Format:
+
+```csv
+Timestamp;Aktion;Beschreibung
+2024-01-15 06:00:01;Losung gepostet;Der Herr ist mein Hirte...
+2024-01-17 18:00:05;Quiz gestartet;Aus welchem Buch stammt dieser Vers?
+2024-01-18 18:00:02;Quiz aufgelöst;Teilnehmer: 42, Verteilung: A: 30%, B: 20%, C: 40%, D: 10%
+2024-01-20 17:00:01;GoDi-Erinnerung gesendet;Gottesdienst-Erinnerung gesendet
+2024-01-21 08:15:03;Neue Mitglieder;user@mastodon.social
+2024-01-21 14:30:22;Reaktion auf Erwähnungen;user@instance.social: Hilfe gesendet
+```
+
+| Aktion | Beschreibung |
+|--------|--------------|
+| Losung gepostet | Der Losungstext |
+| GoDi-Erinnerung gesendet | (feste Beschreibung) |
+| Quiz gestartet | Die Quizfrage |
+| Quiz aufgelöst | Teilnehmerzahl und Antwortverteilung |
+| Neue Mitglieder | Account-Name des neuen Followers |
+| Reaktion auf Erwähnungen | Account und Art der Reaktion |
 
 ## Losungen-Daten
 
