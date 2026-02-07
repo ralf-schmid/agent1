@@ -1,10 +1,16 @@
 """Verwaltung von Follower-Interaktionen."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 from mastodon import Mastodon
+
+if TYPE_CHECKING:
+    from losungs_bot.activity_logger import ActivityLogger
 
 logger = structlog.get_logger()
 
@@ -36,6 +42,7 @@ Gottes Segen! 🙏"""
         client: Mastodon,
         state_file: str = "data/follower_state.json",
         notify_account: str | None = None,
+        activity_logger: ActivityLogger | None = None,
     ):
         """
         Initialisiert den FollowerManager.
@@ -44,10 +51,12 @@ Gottes Segen! 🙏"""
             client: Mastodon API Client
             state_file: Pfad zur State-Datei für bekannte Follower
             notify_account: Account für Benachrichtigungen (z.B. "ralf_schmid@chaos.social")
+            activity_logger: Optional - Logger für Aktivitäten
         """
         self._client = client
         self._state_file = Path(state_file)
         self._notify_account = notify_account
+        self._activity_logger = activity_logger
         self._known_followers: set[str] = self._load_state()
 
         logger.info(
@@ -212,6 +221,10 @@ Gottes Segen! 🙏"""
 
             # Willkommensnachricht senden
             self.send_welcome_message(follower)
+
+            # Aktivität loggen
+            if self._activity_logger:
+                self._activity_logger.log_new_follower(follower["acct"])
 
             # Admin benachrichtigen
             if self._notify_account:

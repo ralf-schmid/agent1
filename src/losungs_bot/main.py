@@ -6,6 +6,7 @@ import sys
 
 import structlog
 
+from losungs_bot.activity_logger import ActivityLogger
 from losungs_bot.ai_client import AIClient
 from losungs_bot.bible_links import BibleLinkGenerator
 from losungs_bot.church_service import ChurchServiceReminder
@@ -79,6 +80,9 @@ class LosungsBot:
         self._last_mention_id: str | None = None
         self._last_favorite_id: str | None = None
 
+        # Activity Logger für CSV-Protokollierung
+        self.activity_logger = ActivityLogger(timezone=self.settings.timezone)
+
         logger.info("losungs_bot_initialized")
 
     def _get_ai_client(self) -> AIClient | None:
@@ -100,6 +104,7 @@ class LosungsBot:
                 client=self.mastodon._client,
                 state_file=self.settings.follower_state_file,
                 notify_account=self.settings.admin_notify_account,
+                activity_logger=self.activity_logger,
             )
             # Beim ersten Start: bestehende Follower initialisieren
             self.follower_manager.initialize_known_followers()
@@ -146,6 +151,7 @@ class LosungsBot:
                 losungen_parser=self.losungen_parser,
                 bible_links=self.bible_links,
                 quiz_service=self.quiz_service,
+                activity_logger=self.activity_logger,
             )
             logger.info("mention_handler_enabled")
 
@@ -182,6 +188,9 @@ class LosungsBot:
 
         logger.info("losung_posted_successfully", status_id=result["id"])
 
+        # Aktivität loggen
+        self.activity_logger.log_losung_posted(losung.losungstext)
+
         # Copyright-Antwort posten wenn nötig
         if formatted.needs_reply:
             reply_result = self.mastodon.post_status(
@@ -212,6 +221,7 @@ class LosungsBot:
         result = self.mastodon.post_status(reminder_text)
         if result:
             logger.info("church_reminder_posted", status_id=result["id"])
+            self.activity_logger.log_godi_reminder()
             return True
 
         logger.error("church_reminder_failed")
@@ -278,6 +288,7 @@ class LosungsBot:
                 status_id=result["id"],
                 poll_id=poll_id,
             )
+            self.activity_logger.log_quiz_started(quiz.question)
             return True
 
         logger.error("quiz_no_poll_id")
@@ -313,6 +324,22 @@ class LosungsBot:
         if result:
             logger.info("quiz_solution_posted", status_id=result["id"])
             self.quiz_state.clear_active_quiz()
+
+            # Aktivität loggen
+            participants = 0
+            distribution = "N/A"
+            if poll_results and poll_results.get("votes_count", 0) > 0:
+                participants = poll_results["votes_count"]
+                options = poll_results.get("options", [])
+                dist_parts = []
+                for i, opt in enumerate(options):
+                    votes = opt.get("votes_count", 0)
+                    pct = round(votes / participants * 100) if participants > 0 else 0
+                    label = chr(65 + i)  # A, B, C, D
+                    dist_parts.append(f"{label}: {pct}%")
+                distribution = ", ".join(dist_parts)
+            self.activity_logger.log_quiz_resolved(participants, distribution)
+
             return True
 
         logger.error("quiz_solution_failed")

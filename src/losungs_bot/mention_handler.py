@@ -1,11 +1,17 @@
 """Handler für Erwähnungen und Interaktionen."""
 
+from __future__ import annotations
+
 import re
+from typing import TYPE_CHECKING
 
 import structlog
 
 from losungs_bot.bible_links import BibleLinkGenerator
 from losungs_bot.losungen import LosungenParser
+
+if TYPE_CHECKING:
+    from losungs_bot.activity_logger import ActivityLogger
 
 logger = structlog.get_logger()
 
@@ -38,6 +44,7 @@ class MentionHandler:
         losungen_parser: LosungenParser,
         bible_links: BibleLinkGenerator,
         quiz_service=None,
+        activity_logger: ActivityLogger | None = None,
     ):
         """
         Initialisiert den Mention-Handler.
@@ -47,11 +54,13 @@ class MentionHandler:
             losungen_parser: Parser für Losungen
             bible_links: Generator für Bibel-Links
             quiz_service: Optional - Quiz-Service für Quiz auf Abruf
+            activity_logger: Optional - Logger für Aktivitäten
         """
         self.mastodon = mastodon_client
         self.losungen = losungen_parser
         self.bible_links = bible_links
         self.quiz_service = quiz_service
+        self.activity_logger = activity_logger
         logger.info("mention_handler_initialized")
 
     def process_mention(self, notification: dict) -> bool:
@@ -83,21 +92,39 @@ class MentionHandler:
         command = self._detect_command(content_clean)
 
         if command == "help":
-            return self._reply_help(status_id, username)
+            success = self._reply_help(status_id, username)
+            if success:
+                self._log_mention_response(username, "Hilfe gesendet")
+            return success
         elif command == "verse_today":
-            return self._reply_verse_today(status_id, username)
+            success = self._reply_verse_today(status_id, username)
+            if success:
+                self._log_mention_response(username, "Tageslosung gesendet")
+            return success
         elif command == "verse_random":
-            return self._reply_verse_random(status_id, username)
+            success = self._reply_verse_random(status_id, username)
+            if success:
+                self._log_mention_response(username, "Zufällige Losung gesendet")
+            return success
         elif command == "quiz":
-            return self._reply_quiz(status_id, username)
+            success = self._reply_quiz(status_id, username)
+            if success:
+                self._log_mention_response(username, "Quiz gestartet")
+            return success
         else:
             # Versuche Bibelstelle zu erkennen
             verse_match = self.VERSE_PATTERN.search(content)
             if verse_match:
-                return self._reply_verse_link(status_id, username, verse_match)
+                success = self._reply_verse_link(status_id, username, verse_match)
+                if success:
+                    self._log_mention_response(username, "Bibelstellen-Link gesendet")
+                return success
 
             # Fallback: Hilfe anbieten
-            return self._reply_unknown(status_id, username)
+            success = self._reply_unknown(status_id, username)
+            if success:
+                self._log_mention_response(username, "Unbekannte Anfrage beantwortet")
+            return success
 
     def _detect_command(self, content: str) -> str | None:
         """Erkennt einen Befehl im Text."""
@@ -270,3 +297,8 @@ Schreib "hilfe" für eine Liste meiner Befehle!"""
         except Exception as e:
             logger.error("mention_reply_failed", error=str(e))
             return False
+
+    def _log_mention_response(self, username: str, reaction: str) -> None:
+        """Loggt eine Mention-Reaktion falls ein Logger vorhanden ist."""
+        if self.activity_logger:
+            self.activity_logger.log_mention_response(username, reaction)
