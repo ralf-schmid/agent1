@@ -138,6 +138,42 @@ Du kannst ihm auch direkt schreiben:
 - `quiz` – Starte ein persönliches Quiz
 - `Joh 3,16` – Link zu einer Bibelstelle
 
+## Vibe-Coding mit Claude Code
+
+Eine Sache muss ich noch erwähnen: Dieses Projekt wäre ohne **Claude Code** nicht so entstanden. Was ist "Vibe-Coding"? Es ist diese neue Art der Softwareentwicklung, bei der man mit einer KI im Dialog programmiert – weniger wie klassisches Coding, mehr wie ein Gespräch mit einem erfahrenen Entwickler-Kollegen.
+
+### Wie funktioniert das konkret?
+
+Statt stundenlang Dokumentation zu lesen oder Stack Overflow zu durchforsten, beschreibe ich einfach, was ich bauen will:
+
+> "Ich möchte einen Mastodon-Bot, der täglich die Herrnhuter Losungen postet."
+
+Claude Code versteht den Kontext, schlägt eine Architektur vor, schreibt den Code – und ich kann in Echtzeit Feedback geben, Richtungen korrigieren oder neue Features anfragen.
+
+### Was macht es so besonders?
+
+- **Schnelle Iterationen** – Von der Idee zum funktionierenden Feature in Minuten statt Stunden
+- **Pair-Programming-Gefühl** – Man ist nicht allein, sondern hat einen Sparringspartner
+- **Lernen nebenbei** – Claude erklärt, warum bestimmte Lösungen besser sind
+- **Fokus auf das Wesentliche** – Weniger Boilerplate, mehr Produktivität
+
+### Ein Beispiel aus diesem Projekt
+
+Als ich das CSV-Logging für Bot-Aktivitäten einbauen wollte, habe ich einfach beschrieben, welche Spalten ich brauche und welche Aktionen geloggt werden sollen. Innerhalb von Minuten hatte ich:
+
+- Einen `ActivityLogger` mit CSV-Export
+- Schutz gegen CSV-Injection (Sicherheit!)
+- Integration in alle relevanten Bot-Komponenten
+- Vollständige Tests
+
+Das Beste daran: Ich musste nicht jede Zeile selbst tippen, konnte mich aber trotzdem auf die Architektur und die Details konzentrieren, die mir wichtig waren.
+
+### Mein Fazit zum Vibe-Coding
+
+Es macht einfach **unglaublich viel Spaß**. Die Barriere zwischen "Idee haben" und "Feature ist live" wird so niedrig wie nie zuvor. Man kann experimentieren, schnell Prototypen bauen und sich auf die kreativen Aspekte der Softwareentwicklung konzentrieren.
+
+Für Hobby-Projekte wie diesen Bot ist es perfekt. Aber auch im professionellen Kontext sehe ich enormes Potenzial – nicht als Ersatz für Entwickler, sondern als Werkzeug, das uns produktiver und kreativer macht.
+
 ## Fazit
 
 Ein Bot zu bauen ist mehr als nur Code schreiben. Es geht darum, einen echten Mehrwert zu schaffen – und dabei iterativ zu lernen. Mein Losungs-Bot hat sich von einem simplen Poster zu einem interaktiven Begleiter entwickelt.
