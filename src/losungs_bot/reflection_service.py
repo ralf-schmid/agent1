@@ -1,8 +1,8 @@
 """Service für tägliche Reflexionsfragen zur Losung."""
 
 import structlog
-from anthropic import Anthropic
 
+from losungs_bot.ai_client import AIClient
 from losungs_bot.losungen import Losung
 
 logger = structlog.get_logger()
@@ -24,14 +24,20 @@ Regeln:
 
 Antworte NUR mit der Reflexionsfrage, ohne Anführungszeichen oder Zusätze."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, ai_client: AIClient | None = None, api_key: str | None = None):
         """
         Initialisiert den Reflexions-Service.
 
         Args:
-            api_key: Anthropic API Key
+            ai_client: Gemeinsamer AI-Client (bevorzugt)
+            api_key: Anthropic API Key (falls kein Client übergeben)
         """
-        self.client = Anthropic(api_key=api_key)
+        if ai_client:
+            self.ai_client = ai_client
+        elif api_key:
+            self.ai_client = AIClient(api_key)
+        else:
+            raise ValueError("Either ai_client or api_key must be provided")
         logger.info("reflection_service_initialized")
 
     def generate_reflection(self, losung: Losung) -> str | None:
@@ -51,29 +57,24 @@ Antworte NUR mit der Reflexionsfrage, ohne Anführungszeichen oder Zusätze."""
 
 Die Frage soll Menschen helfen, den Vers auf ihr eigenes Leben anzuwenden."""
 
-        try:
-            response = self.client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=200,
-                messages=[{"role": "user", "content": user_prompt}],
-                system=self.SYSTEM_PROMPT,
-            )
+        question = self.ai_client.generate(
+            user_prompt=user_prompt,
+            system_prompt=self.SYSTEM_PROMPT,
+            max_tokens=200,
+        )
 
-            question = response.content[0].text.strip()
-
-            # Anführungszeichen am Anfang und Ende entfernen
-            question = question.lstrip('"\'').rstrip('"\'')
-
-            logger.info(
-                "reflection_generated",
-                question_preview=question[:50],
-            )
-
-            return question
-
-        except Exception as e:
-            logger.error("reflection_generation_failed", error=str(e))
+        if not question:
             return None
+
+        # Anführungszeichen am Anfang und Ende entfernen
+        question = question.lstrip('"\'').rstrip('"\'')
+
+        logger.info(
+            "reflection_generated",
+            question_preview=question[:50],
+        )
+
+        return question
 
     def format_reflection_post(self, losung: Losung, question: str) -> str:
         """
