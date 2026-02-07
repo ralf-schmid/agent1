@@ -8,7 +8,6 @@ import pytest
 
 from losungs_bot.losungen import Losung, LosungenParser
 
-
 # Sample XML im losungen.de Format
 SAMPLE_XML = """<?xml version="1.0" encoding="utf-8"?>
 <FreeXml>

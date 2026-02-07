@@ -1,5 +1,6 @@
 """Tests für den Quiz-Service."""
 
+
 import json
 import tempfile
 from pathlib import Path
