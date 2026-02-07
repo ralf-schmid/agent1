@@ -5,8 +5,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import structlog
-from anthropic import Anthropic
 
+from losungs_bot.ai_client import AIClient
 from losungs_bot.losungen import Losung
 
 logger = structlog.get_logger()
@@ -54,14 +54,20 @@ Antworte NUR mit validem JSON im folgenden Format:
   "explanation": "Kurze Erklärung warum die Antwort richtig ist (1-2 Sätze)"
 }"""
 
-    def __init__(self, api_key: str):
+    def __init__(self, ai_client: AIClient | None = None, api_key: str | None = None):
         """
         Initialisiert den Quiz-Service.
 
         Args:
-            api_key: Anthropic API Key
+            ai_client: Gemeinsamer AI-Client (bevorzugt)
+            api_key: Anthropic API Key (falls kein Client übergeben)
         """
-        self.client = Anthropic(api_key=api_key)
+        if ai_client:
+            self.ai_client = ai_client
+        elif api_key:
+            self.ai_client = AIClient(api_key)
+        else:
+            raise ValueError("Either ai_client or api_key must be provided")
         logger.info("quiz_service_initialized")
 
     def generate_quiz(self, losung: Losung) -> QuizQuestion | None:
@@ -82,15 +88,16 @@ Text (wird den Teilnehmern gezeigt): "{losung.losungstext}"
 Die Frage kann nach dem Buch, Verfasser, historischen Kontext oder der Bedeutung fragen."""
 
         try:
-            response = self.client.messages.create(
-                model="claude-3-haiku-20240307",
+            content = self.ai_client.generate(
+                user_prompt=user_prompt,
+                system_prompt=self.SYSTEM_PROMPT,
                 max_tokens=500,
-                messages=[{"role": "user", "content": user_prompt}],
-                system=self.SYSTEM_PROMPT,
             )
 
+            if not content:
+                return None
+
             # JSON aus der Antwort extrahieren
-            content = response.content[0].text
             quiz_data = json.loads(content)
 
             quiz = QuizQuestion(

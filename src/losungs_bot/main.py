@@ -6,6 +6,7 @@ import sys
 
 import structlog
 
+from losungs_bot.ai_client import AIClient
 from losungs_bot.bible_links import BibleLinkGenerator
 from losungs_bot.church_service import ChurchServiceReminder
 from losungs_bot.config import get_settings
@@ -71,11 +72,20 @@ class LosungsBot:
         self.reflection_service = None
         self.mention_handler = None
 
+        # Gemeinsamer AI-Client (wird bei Bedarf initialisiert)
+        self._ai_client: AIClient | None = None
+
         # Separate Notification-IDs für verschiedene Typen
         self._last_mention_id: str | None = None
         self._last_favorite_id: str | None = None
 
         logger.info("losungs_bot_initialized")
+
+    def _get_ai_client(self) -> AIClient | None:
+        """Gibt den gemeinsamen AI-Client zurück (Lazy Init)."""
+        if self._ai_client is None and self.settings.anthropic_api_key:
+            self._ai_client = AIClient(self.settings.anthropic_api_key)
+        return self._ai_client
 
     def _init_church_reminder(self) -> None:
         """Initialisiert die Gottesdienst-Erinnerung."""
@@ -103,7 +113,8 @@ class LosungsBot:
     def _init_quiz_service(self) -> None:
         """Initialisiert den Quiz-Service."""
         if self.settings.quiz_enabled and self.settings.anthropic_api_key:
-            self.quiz_service = QuizService(api_key=self.settings.anthropic_api_key)
+            ai_client = self._get_ai_client()
+            self.quiz_service = QuizService(ai_client=ai_client)
             self.quiz_state = QuizStateManager(
                 state_file=self.settings.quiz_state_file
             )
@@ -118,9 +129,8 @@ class LosungsBot:
     def _init_reflection_service(self) -> None:
         """Initialisiert den Reflexions-Service."""
         if self.settings.reflection_enabled and self.settings.anthropic_api_key:
-            self.reflection_service = ReflectionService(
-                api_key=self.settings.anthropic_api_key
-            )
+            ai_client = self._get_ai_client()
+            self.reflection_service = ReflectionService(ai_client=ai_client)
             logger.info(
                 "reflection_service_enabled",
                 reflection_time=self.settings.reflection_time,
@@ -660,7 +670,6 @@ def main() -> None:
         if not bot.settings.anthropic_api_key:
             print("❌ ANTHROPIC_API_KEY nicht konfiguriert!")
             sys.exit(1)
-        from losungs_bot.quiz_service import QuizService
 
         print("\n" + "=" * 50)
         print("📖 VORSCHAU - Bibelquiz")
@@ -676,7 +685,8 @@ def main() -> None:
         print("-" * 50)
         print("⏳ Generiere Quiz mit Claude...")
 
-        quiz_service = QuizService(api_key=bot.settings.anthropic_api_key)
+        ai_client = bot._get_ai_client()
+        quiz_service = QuizService(ai_client=ai_client)
         quiz = quiz_service.generate_quiz(losung)
 
         if not quiz:
