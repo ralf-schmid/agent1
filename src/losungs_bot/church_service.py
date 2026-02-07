@@ -29,6 +29,6 @@ Morgen ist Sonntag – eine gute Gelegenheit, einen Gottesdienst zu besuchen! �
 📍 bei Dir vor Ort
 💻 oder online
 
-Beispielsweise im ICF Karlsruhe: 🔗 {ICF_KARLSRUHE_URL}
+Wenn Du in der Nähe von Karlsruhe bist, schau gerne im ICF Karlsruhe vorbei: 🔗 {ICF_KARLSRUHE_URL}
 
-#Gottesdienst #Sonntag #Kirche"""
+#Gottesdienst #Sonntag #Kirche #icf #icf-karlsruhe #Karlsruhe"""

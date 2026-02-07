@@ -108,7 +108,7 @@ class PostFormatter:
 🔗 {self.COPYRIGHT_URL}
 ℹ️ {self.INFO_URL}
 
-#DieLosungen #Bibel #Herrnhut"""
+#losung #DieLosungen #Bibel #Herrnhut"""
 
     def _format_main_post(self, losung: Losung) -> str:
         """Formatiert den Hauptpost mit Bibelversen (ohne Copyright)."""
@@ -126,7 +126,7 @@ class PostFormatter:
 — {losung.lehrtextvers}
 🔗 {lehrtext_url}
 
-#DieLosungen #Bibel #Herrnhut"""
+#losung #DieLosungen #Bibel #Herrnhut"""
 
     def _format_copyright_reply(self) -> str:
         """Formatiert die Copyright-Antwort mit Podcast-Links."""
