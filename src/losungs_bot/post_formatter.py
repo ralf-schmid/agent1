@@ -108,10 +108,10 @@ class PostFormatter:
 🔗 {self.COPYRIGHT_URL}
 ℹ️ {self.INFO_URL}
 
-#losung #DieLosungen #Bibel #Herrnhut"""
+#losung #DieLosungen #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott #Motivation #Inspiration"""
 
     def _format_main_post(self, losung: Losung) -> str:
-        """Formatiert den Hauptpost mit Bibelversen (ohne Copyright)."""
+        """Formatiert den Hauptpost mit Bibelversen (ohne Copyright, ohne Hashtags)."""
         datum_str = self._format_date(losung.datum)
         losung_url = self.bible_links.generate_url(losung.losungsvers)
         lehrtext_url = self.bible_links.generate_url(losung.lehrtextvers)
@@ -124,19 +124,19 @@ class PostFormatter:
 
 💫 „{losung.lehrtext}"
 — {losung.lehrtextvers}
-🔗 {lehrtext_url}
-
-#losung #DieLosungen #Bibel #Herrnhut"""
+🔗 {lehrtext_url}"""
 
     def _format_copyright_reply(self) -> str:
-        """Formatiert die Copyright-Antwort mit Podcast-Links."""
+        """Formatiert die Copyright-Antwort mit Podcast-Links und Hashtags."""
         return f"""{self.COPYRIGHT}
 🔗 {self.COPYRIGHT_URL}
 ℹ️ {self.INFO_URL}
 
 🎧 Als Podcast:
 🍎 {self.podcast_apple}
-🟢 {self.podcast_spotify}"""
+🟢 {self.podcast_spotify}
+
+#losung #DieLosungen #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott #Motivation #Inspiration"""
 
     def _format_date(self, datum: date) -> str:
         """Formatiert ein Datum auf Deutsch."""
