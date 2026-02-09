@@ -15,6 +15,7 @@ from losungs_bot.follower_manager import FollowerManager
 from losungs_bot.losungen import LosungenParser
 from losungs_bot.mastodon_client import MastodonClient
 from losungs_bot.mention_handler import MentionHandler
+from losungs_bot.metrics import get_collector, start_metrics_server
 from losungs_bot.post_formatter import PostFormatter
 from losungs_bot.quiz_service import QuizService, QuizStateManager
 from losungs_bot.reflection_service import ReflectionService
@@ -82,6 +83,9 @@ class LosungsBot:
 
         # Activity Logger für CSV-Protokollierung
         self.activity_logger = ActivityLogger(timezone=self.settings.timezone)
+
+        # Metriken-Collector
+        self.metrics = get_collector()
 
         logger.info("losungs_bot_initialized")
 
@@ -152,6 +156,7 @@ class LosungsBot:
                 bible_links=self.bible_links,
                 quiz_service=self.quiz_service,
                 activity_logger=self.activity_logger,
+                metrics_collector=self.metrics,
             )
             logger.info("mention_handler_enabled")
 
@@ -190,6 +195,7 @@ class LosungsBot:
 
         # Aktivität loggen
         self.activity_logger.log_losung_posted(losung.losungstext)
+        self.metrics.record_post("losung")
 
         # Copyright-Antwort posten wenn nötig
         if formatted.needs_reply:
@@ -222,6 +228,7 @@ class LosungsBot:
         if result:
             logger.info("church_reminder_posted", status_id=result["id"])
             self.activity_logger.log_godi_reminder()
+            self.metrics.record_post("church_reminder")
             return True
 
         logger.error("church_reminder_failed")
@@ -235,6 +242,13 @@ class LosungsBot:
         count = self.follower_manager.process_new_followers()
         if count > 0:
             logger.info("new_followers_processed", count=count)
+
+        # Follower-Metrik aktualisieren
+        try:
+            me = self.mastodon._client.me()
+            self.metrics.set_followers_count(me.get("followers_count", 0))
+        except Exception:
+            pass
 
     def post_quiz(self) -> bool:
         """Postet ein neues Quiz basierend auf der Tageslosung."""
@@ -289,6 +303,7 @@ class LosungsBot:
                 poll_id=poll_id,
             )
             self.activity_logger.log_quiz_started(quiz.question)
+            self.metrics.record_post("quiz")
             return True
 
         logger.error("quiz_no_poll_id")
@@ -368,6 +383,7 @@ class LosungsBot:
         result = self.mastodon.post_status(post_text)
         if result:
             logger.info("reflection_posted", status_id=result["id"])
+            self.metrics.record_post("reflection")
             return True
 
         logger.error("reflection_post_failed")
@@ -452,6 +468,16 @@ class LosungsBot:
         if not self.mastodon.verify_credentials():
             logger.error("invalid_mastodon_credentials")
             sys.exit(1)
+
+        # Metrics-Server starten
+        if self.settings.metrics_enabled:
+            start_metrics_server(port=self.settings.metrics_port)
+            # Initial Follower-Count setzen
+            try:
+                me = self.mastodon._client.me()
+                self.metrics.set_followers_count(me.get("followers_count", 0))
+            except Exception:
+                pass
 
         # Optionale Komponenten initialisieren
         self._init_church_reminder()

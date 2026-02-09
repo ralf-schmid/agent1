@@ -12,6 +12,7 @@ from losungs_bot.losungen import LosungenParser
 
 if TYPE_CHECKING:
     from losungs_bot.activity_logger import ActivityLogger
+    from losungs_bot.metrics import MetricsCollector
 
 logger = structlog.get_logger()
 
@@ -45,6 +46,7 @@ class MentionHandler:
         bible_links: BibleLinkGenerator,
         quiz_service=None,
         activity_logger: ActivityLogger | None = None,
+        metrics_collector: MetricsCollector | None = None,
     ):
         """
         Initialisiert den Mention-Handler.
@@ -55,12 +57,14 @@ class MentionHandler:
             bible_links: Generator für Bibel-Links
             quiz_service: Optional - Quiz-Service für Quiz auf Abruf
             activity_logger: Optional - Logger für Aktivitäten
+            metrics_collector: Optional - Collector für Prometheus-Metriken
         """
         self.mastodon = mastodon_client
         self.losungen = losungen_parser
         self.bible_links = bible_links
         self.quiz_service = quiz_service
         self.activity_logger = activity_logger
+        self.metrics = metrics_collector
         logger.info("mention_handler_initialized")
 
     def process_mention(self, notification: dict) -> bool:
@@ -95,21 +99,25 @@ class MentionHandler:
             success = self._reply_help(status_id, username)
             if success:
                 self._log_mention_response(username, "Hilfe gesendet")
+                self._record_mention_metric("help")
             return success
         elif command == "verse_today":
             success = self._reply_verse_today(status_id, username)
             if success:
                 self._log_mention_response(username, "Tageslosung gesendet")
+                self._record_mention_metric("verse_today")
             return success
         elif command == "verse_random":
             success = self._reply_verse_random(status_id, username)
             if success:
                 self._log_mention_response(username, "Zufällige Losung gesendet")
+                self._record_mention_metric("verse_random")
             return success
         elif command == "quiz":
             success = self._reply_quiz(status_id, username)
             if success:
                 self._log_mention_response(username, "Quiz gestartet")
+                self._record_mention_metric("quiz")
             return success
         else:
             # Versuche Bibelstelle zu erkennen
@@ -118,12 +126,14 @@ class MentionHandler:
                 success = self._reply_verse_link(status_id, username, verse_match)
                 if success:
                     self._log_mention_response(username, "Bibelstellen-Link gesendet")
+                    self._record_mention_metric("verse_link")
                 return success
 
             # Fallback: Hilfe anbieten
             success = self._reply_unknown(status_id, username)
             if success:
                 self._log_mention_response(username, "Unbekannte Anfrage beantwortet")
+                self._record_mention_metric("unknown")
             return success
 
     def _detect_command(self, content: str) -> str | None:
@@ -302,3 +312,8 @@ Schreib "hilfe" für eine Liste meiner Befehle!"""
         """Loggt eine Mention-Reaktion falls ein Logger vorhanden ist."""
         if self.activity_logger:
             self.activity_logger.log_mention_response(username, reaction)
+
+    def _record_mention_metric(self, command: str) -> None:
+        """Zeichnet eine Mention-Metrik auf falls ein Collector vorhanden ist."""
+        if self.metrics:
+            self.metrics.record_mention(command)
