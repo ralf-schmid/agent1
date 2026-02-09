@@ -186,13 +186,13 @@ Alle Einstellungen erfolgen über Umgebungsvariablen (`.env`-Datei):
 | Variable | Beschreibung | Default |
 |----------|--------------|---------|
 | `METRICS_ENABLED` | Metriken-Endpoint aktivieren | `false` |
-| `METRICS_PORT` | HTTP-Port für /metrics | `80` |
+| `METRICS_PORT` | HTTP-Port für /metrics | `8080` |
 
 ## Prometheus Metriken
 
 Der Bot stellt Prometheus-Metriken bereit, wenn `METRICS_ENABLED=true` gesetzt ist.
 
-**Endpoint:** `http://localhost:80/metrics` (bzw. konfigurierter Port)
+**Endpoint:** `http://localhost:8080/metrics` (bzw. konfigurierter Port)
 
 | Metrik | Typ | Beschreibung |
 |--------|-----|--------------|

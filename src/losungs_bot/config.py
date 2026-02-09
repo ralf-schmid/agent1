@@ -71,7 +71,7 @@ class Settings(BaseSettings):
 
     # Prometheus Metriken
     metrics_enabled: bool = Field(default=False)  # Metriken-Endpoint aktivieren
-    metrics_port: int = Field(default=80)  # HTTP-Port für /metrics
+    metrics_port: int = Field(default=8080)  # HTTP-Port für /metrics
 
 
 def get_settings() -> Settings:
