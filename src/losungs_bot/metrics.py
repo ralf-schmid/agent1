@@ -2,13 +2,12 @@
 
 import threading
 import time
-from http.server import HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import psutil
 import structlog
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 from prometheus_client.core import CollectorRegistry
-from prometheus_client.exposition import MetricsHandler
 
 logger = structlog.get_logger()
 
@@ -142,7 +141,7 @@ class MetricsServer:
         """Erstellt einen Handler mit System-Metriken-Update."""
         collector = self.collector
 
-        class CustomMetricsHandler(MetricsHandler):
+        class MetricsHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 # System-Metriken vor jeder Abfrage aktualisieren
                 if collector:
@@ -154,7 +153,11 @@ class MetricsServer:
                 self.end_headers()
                 self.wfile.write(generate_latest(REGISTRY))
 
-        return CustomMetricsHandler
+            def log_message(self, format, *args):
+                # Unterdrücke Standard-HTTP-Logging
+                pass
+
+        return MetricsHandler
 
     def start(self) -> None:
         """Startet den Metrics-Server in einem separaten Thread."""
