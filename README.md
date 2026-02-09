@@ -181,6 +181,33 @@ Alle Einstellungen erfolgen über Umgebungsvariablen (`.env`-Datei):
 |----------|--------------|---------|
 | `ANTHROPIC_API_KEY` | API-Key für Claude | - |
 
+### Prometheus Metriken
+
+| Variable | Beschreibung | Default |
+|----------|--------------|---------|
+| `METRICS_ENABLED` | Metriken-Endpoint aktivieren | `false` |
+| `METRICS_PORT` | HTTP-Port für /metrics | `80` |
+
+## Prometheus Metriken
+
+Der Bot stellt Prometheus-Metriken bereit, wenn `METRICS_ENABLED=true` gesetzt ist.
+
+**Endpoint:** `http://localhost:80/metrics` (bzw. konfigurierter Port)
+
+| Metrik | Typ | Beschreibung |
+|--------|-----|--------------|
+| `losungsbot_posts_total` | Counter | Gesamtanzahl Posts (Labels: type) |
+| `losungsbot_followers_count` | Gauge | Aktuelle Follower-Anzahl |
+| `losungsbot_mentions_total` | Counter | Verarbeitete Erwähnungen (Labels: command) |
+| `losungsbot_uptime_seconds` | Gauge | Uptime in Sekunden |
+| `losungsbot_cpu_usage_percent` | Gauge | CPU-Auslastung in % |
+| `losungsbot_memory_usage_bytes` | Gauge | RAM-Nutzung in Bytes |
+| `losungsbot_memory_usage_percent` | Gauge | RAM-Nutzung in % |
+
+**Post-Typen:** `losung`, `quiz`, `reflection`, `church_reminder`
+
+**Command-Labels:** `help`, `verse_today`, `verse_random`, `quiz`, `verse_link`, `unknown`
+
 ## Aktivitäts-Log
 
 Der Bot protokolliert alle Aktivitäten in `data/activity_log.csv` im Format:

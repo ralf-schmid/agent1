@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     favorites_reaction_enabled: bool = Field(default=False)  # DM bei Favorit
     notification_state_file: str = Field(default="data/notification_state.json")
 
+    # Prometheus Metriken
+    metrics_enabled: bool = Field(default=False)  # Metriken-Endpoint aktivieren
+    metrics_port: int = Field(default=80)  # HTTP-Port für /metrics
+
 
 def get_settings() -> Settings:
     """Erstellt und gibt die Einstellungen zurück."""
