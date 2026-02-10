@@ -30,6 +30,12 @@ FOLLOWERS_COUNT = Gauge(
     registry=REGISTRY,
 )
 
+LIKES_TOTAL = Gauge(
+    "losungsbot_likes_total",
+    "Gesamtanzahl der Likes über alle Posts",
+    registry=REGISTRY,
+)
+
 MENTIONS_TOTAL = Counter(
     "losungsbot_mentions_total",
     "Gesamtanzahl der verarbeiteten Erwähnungen",
@@ -184,6 +190,16 @@ class MetricsCollector:
         """
         FOLLOWERS_COUNT.set(count)
         logger.debug("metric_followers_updated", count=count)
+
+    def set_likes_total(self, count: int) -> None:
+        """
+        Setzt die Gesamtanzahl der Likes über alle Posts.
+
+        Args:
+            count: Gesamtanzahl der Likes
+        """
+        LIKES_TOTAL.set(count)
+        logger.debug("metric_likes_updated", count=count)
 
     def set_health(self, healthy: bool) -> None:
         """

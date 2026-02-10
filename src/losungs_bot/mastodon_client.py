@@ -246,3 +246,31 @@ class MastodonClient:
             logger.error("direct_message_failed", to_user=username, error=str(e))
             return None
 
+    def get_total_likes(self) -> int:
+        """
+        Berechnet die Gesamtanzahl der Likes über alle Posts des Accounts.
+
+        Returns:
+            Gesamtanzahl der Likes (Favourites)
+        """
+        total_likes = 0
+        try:
+            # Eigene Account-ID holen
+            me = self._client.me()
+            account_id = me["id"]
+
+            # Alle Statuses paginiert abrufen
+            statuses = self._client.account_statuses(account_id, limit=40)
+            while statuses:
+                for status in statuses:
+                    total_likes += status.get("favourites_count", 0)
+
+                # Nächste Seite holen
+                statuses = self._client.fetch_next(statuses)
+
+            logger.info("total_likes_calculated", total_likes=total_likes)
+            return total_likes
+        except Exception as e:
+            logger.error("total_likes_calculation_failed", error=str(e))
+            return 0
+
