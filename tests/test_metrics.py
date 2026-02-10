@@ -11,6 +11,7 @@ from losungs_bot.metrics import (
     CPU_USAGE_PERCENT,
     FOLLOWERS_COUNT,
     HEALTH_STATUS,
+    LIKES_TOTAL,
     MEMORY_USAGE_BYTES,
     MEMORY_USAGE_PERCENT,
     MENTIONS_TOTAL,
@@ -36,6 +37,7 @@ def reset_metrics():
     POSTS_TOTAL._metrics.clear()
     MENTIONS_TOTAL._metrics.clear()
     FOLLOWERS_COUNT._value.set(0)
+    LIKES_TOTAL._value.set(0)
     HEALTH_STATUS._value.set(0)
     UPTIME_SECONDS._value.set(0)
     CPU_USAGE_PERCENT._value.set(0)
@@ -85,6 +87,16 @@ class TestMetricsCollector:
 
         collector.set_followers_count(100)
         assert FOLLOWERS_COUNT._value.get() == 100
+
+    def test_set_likes_total(self, temp_data_dir, reset_metrics):
+        """Test dass die Likes-Anzahl korrekt gesetzt wird."""
+        collector = MetricsCollector(data_dir=temp_data_dir)
+
+        collector.set_likes_total(150)
+        assert LIKES_TOTAL._value.get() == 150
+
+        collector.set_likes_total(200)
+        assert LIKES_TOTAL._value.get() == 200
 
     def test_set_health_true(self, temp_data_dir, reset_metrics):
         """Test dass Health auf 1 gesetzt wird wenn healthy."""

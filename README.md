@@ -198,6 +198,7 @@ Der Bot stellt Prometheus-Metriken bereit, wenn `METRICS_ENABLED=true` gesetzt i
 |--------|-----|--------------|
 | `losungsbot_posts_total` | Counter | Gesamtanzahl Posts (Labels: type) |
 | `losungsbot_followers_count` | Gauge | Aktuelle Follower-Anzahl |
+| `losungsbot_likes_total` | Gauge | Gesamtanzahl Likes über alle Posts |
 | `losungsbot_mentions_total` | Counter | Verarbeitete Erwähnungen (Labels: command) |
 | `losungsbot_uptime_seconds` | Gauge | Uptime in Sekunden |
 | `losungsbot_cpu_usage_percent` | Gauge | CPU-Auslastung in % |
