@@ -203,10 +203,15 @@ Der Bot stellt Prometheus-Metriken bereit, wenn `METRICS_ENABLED=true` gesetzt i
 | `losungsbot_cpu_usage_percent` | Gauge | CPU-Auslastung in % |
 | `losungsbot_memory_usage_bytes` | Gauge | RAM-Nutzung in Bytes |
 | `losungsbot_memory_usage_percent` | Gauge | RAM-Nutzung in % |
+| `losungsbot_health_status` | Gauge | Health-Status (1=healthy, 0=unhealthy) |
 
 **Post-Typen:** `losung`, `quiz`, `reflection`, `church_reminder`
 
 **Command-Labels:** `help`, `verse_today`, `verse_random`, `quiz`, `verse_link`, `unknown`
+
+### Counter-Persistenz
+
+Die Counter-Metriken (`posts_total`, `mentions_total`) werden in `data/metrics_state.json` persistiert und beim Neustart des Bots wiederhergestellt. So bleiben die Zählerstände auch nach einem Container-Neustart erhalten.
 
 ## Aktivitäts-Log
 
