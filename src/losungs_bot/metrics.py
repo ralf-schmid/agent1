@@ -1,8 +1,10 @@
 """Prometheus-Metriken für den Losungs-Bot."""
 
+import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 import psutil
 import structlog
@@ -59,15 +61,76 @@ MEMORY_USAGE_PERCENT = Gauge(
     registry=REGISTRY,
 )
 
+HEALTH_STATUS = Gauge(
+    "losungsbot_health_status",
+    "Health-Status des Bots (1=healthy, 0=unhealthy)",
+    registry=REGISTRY,
+)
+
+# Pfad für persistente Counter-Daten
+METRICS_STATE_FILE = Path("data/metrics_state.json")
+
 
 class MetricsCollector:
     """Sammelt und aktualisiert Prometheus-Metriken."""
 
-    def __init__(self):
+    def __init__(self, data_dir: str | None = None):
         """Initialisiert den Metrics Collector."""
         self._start_time = time.time()
         self._process = psutil.Process()
+        self._state_file = Path(data_dir) / "metrics_state.json" if data_dir else METRICS_STATE_FILE
+        self._load_state()
+        # Health auf 1 setzen beim Start
+        HEALTH_STATUS.set(1)
         logger.info("metrics_collector_initialized")
+
+    def _load_state(self) -> None:
+        """Lädt persistierte Counter-Werte aus Datei."""
+        if not self._state_file.exists():
+            logger.debug("metrics_state_file_not_found", path=str(self._state_file))
+            return
+
+        try:
+            with open(self._state_file) as f:
+                state = json.load(f)
+
+            # Posts-Counter wiederherstellen
+            for post_type, count in state.get("posts", {}).items():
+                POSTS_TOTAL.labels(type=post_type)._value.set(count)
+                logger.debug("metric_restored", metric="posts", type=post_type, count=count)
+
+            # Mentions-Counter wiederherstellen
+            for command, count in state.get("mentions", {}).items():
+                MENTIONS_TOTAL.labels(command=command)._value.set(count)
+                logger.debug("metric_restored", metric="mentions", command=command, count=count)
+
+            logger.info("metrics_state_loaded", path=str(self._state_file))
+        except Exception as e:
+            logger.warning("metrics_state_load_failed", error=str(e))
+
+    def _save_state(self) -> None:
+        """Speichert aktuelle Counter-Werte in Datei."""
+        try:
+            # Aktuelle Werte sammeln
+            posts = {}
+            for label_values, metric in POSTS_TOTAL._metrics.items():
+                posts[label_values[0]] = metric._value.get()
+
+            mentions = {}
+            for label_values, metric in MENTIONS_TOTAL._metrics.items():
+                mentions[label_values[0]] = metric._value.get()
+
+            state = {"posts": posts, "mentions": mentions}
+
+            # Verzeichnis erstellen falls nötig
+            self._state_file.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(self._state_file, "w") as f:
+                json.dump(state, f, indent=2)
+
+            logger.debug("metrics_state_saved")
+        except Exception as e:
+            logger.warning("metrics_state_save_failed", error=str(e))
 
     def update_system_metrics(self) -> None:
         """Aktualisiert System-Metriken (CPU, RAM, Uptime)."""
@@ -98,6 +161,7 @@ class MetricsCollector:
             post_type: Art des Posts (losung, quiz, reflection, church_reminder)
         """
         POSTS_TOTAL.labels(type=post_type).inc()
+        self._save_state()
         logger.debug("metric_post_recorded", type=post_type)
 
     def record_mention(self, command: str) -> None:
@@ -108,6 +172,7 @@ class MetricsCollector:
             command: Erkannter Befehl (help, verse_today, verse_random, quiz, verse_link, unknown)
         """
         MENTIONS_TOTAL.labels(command=command).inc()
+        self._save_state()
         logger.debug("metric_mention_recorded", command=command)
 
     def set_followers_count(self, count: int) -> None:
@@ -119,6 +184,16 @@ class MetricsCollector:
         """
         FOLLOWERS_COUNT.set(count)
         logger.debug("metric_followers_updated", count=count)
+
+    def set_health(self, healthy: bool) -> None:
+        """
+        Setzt den Health-Status.
+
+        Args:
+            healthy: True wenn der Bot gesund ist, False sonst
+        """
+        HEALTH_STATUS.set(1 if healthy else 0)
+        logger.debug("metric_health_updated", healthy=healthy)
 
 
 class MetricsServer:
@@ -181,11 +256,11 @@ _collector: MetricsCollector | None = None
 _server: MetricsServer | None = None
 
 
-def get_collector() -> MetricsCollector:
+def get_collector(data_dir: str | None = None) -> MetricsCollector:
     """Gibt den globalen MetricsCollector zurück (lazy initialization)."""
     global _collector
     if _collector is None:
-        _collector = MetricsCollector()
+        _collector = MetricsCollector(data_dir=data_dir)
     return _collector
 
 
