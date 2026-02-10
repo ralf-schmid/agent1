@@ -243,10 +243,11 @@ class LosungsBot:
         if count > 0:
             logger.info("new_followers_processed", count=count)
 
-        # Follower-Metrik aktualisieren
+        # Metriken aktualisieren (Follower und Likes)
         try:
             me = self.mastodon._client.me()
             self.metrics.set_followers_count(me.get("followers_count", 0))
+            self.metrics.set_likes_total(self.mastodon.get_total_likes())
         except Exception:
             pass
 
@@ -472,10 +473,11 @@ class LosungsBot:
         # Metrics-Server starten
         if self.settings.metrics_enabled:
             start_metrics_server(port=self.settings.metrics_port)
-            # Initial Follower-Count setzen
+            # Initial Metriken setzen
             try:
                 me = self.mastodon._client.me()
                 self.metrics.set_followers_count(me.get("followers_count", 0))
+                self.metrics.set_likes_total(self.mastodon.get_total_likes())
             except Exception:
                 pass
 
