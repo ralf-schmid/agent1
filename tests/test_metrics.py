@@ -4,7 +4,6 @@ import json
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -50,7 +49,7 @@ class TestMetricsCollector:
 
     def test_initialization(self, temp_data_dir, reset_metrics):
         """Test dass der Collector korrekt initialisiert wird."""
-        collector = MetricsCollector(data_dir=temp_data_dir)
+        MetricsCollector(data_dir=temp_data_dir)
 
         # Health sollte auf 1 gesetzt sein
         assert HEALTH_STATUS._value.get() == 1
@@ -158,7 +157,7 @@ class TestMetricsPersistence:
             json.dump(state, f)
 
         # Collector initialisieren - sollte State laden
-        collector = MetricsCollector(data_dir=temp_data_dir)
+        MetricsCollector(data_dir=temp_data_dir)
 
         assert POSTS_TOTAL.labels(type="losung")._value.get() == 10
         assert POSTS_TOTAL.labels(type="quiz")._value.get() == 5
