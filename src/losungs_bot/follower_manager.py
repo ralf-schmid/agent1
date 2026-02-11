@@ -228,10 +228,14 @@ Gottes Segen! 🙏"""
 
             # Admin benachrichtigen
             if self._notify_account:
+                try:
+                    my_followers = self._client.me().get("followers_count", 0)
+                except Exception:
+                    my_followers = "?"
                 self.notify_admin(
                     f"🆕 Neuer Follower: @{follower['acct']}\n"
                     f"Name: {follower.get('display_name', 'Unbekannt')}\n"
-                    f"Followers: {follower.get('followers_count', 0)}"
+                    f"Gesamt-Follower: {my_followers}"
                 )
 
         return len(new_followers)
