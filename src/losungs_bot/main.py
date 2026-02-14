@@ -19,6 +19,7 @@ from losungs_bot.metrics import get_collector, start_metrics_server
 from losungs_bot.post_formatter import PostFormatter
 from losungs_bot.quiz_service import QuizService, QuizStateManager
 from losungs_bot.reflection_service import ReflectionService
+from losungs_bot.repost_service import RepostService
 from losungs_bot.scheduler import LosungScheduler, parse_time
 
 
@@ -73,6 +74,7 @@ class LosungsBot:
         self.quiz_state = None
         self.reflection_service = None
         self.mention_handler = None
+        self.repost_service = None
 
         # Gemeinsamer AI-Client (wird bei Bedarf initialisiert)
         self._ai_client: AIClient | None = None
@@ -159,6 +161,36 @@ class LosungsBot:
                 metrics_collector=self.metrics,
             )
             logger.info("mention_handler_enabled")
+
+    def _init_repost_service(self) -> None:
+        """Initialisiert den Repost-Service."""
+        if self.settings.repost_enabled and self.settings.repost_accounts:
+            accounts = [
+                a.strip()
+                for a in self.settings.repost_accounts.split(",")
+                if a.strip()
+            ]
+            if accounts:
+                self.repost_service = RepostService(
+                    mastodon_client=self.mastodon,
+                    accounts=accounts,
+                )
+                logger.info(
+                    "repost_service_enabled",
+                    accounts=accounts,
+                    repost_time=self.settings.repost_time,
+                )
+
+    def run_repost(self) -> int:
+        """Führt das automatische Reposten aus."""
+        if not self.repost_service:
+            logger.warning("repost_service_not_initialized")
+            return 0
+
+        logger.info("running_repost")
+        count = self.repost_service.repost_recent_statuses(hours=24)
+        logger.info("repost_completed", boosted_count=count)
+        return count
 
     def post_daily_losung(self) -> bool:
         """Postet die heutige Losung."""
@@ -487,6 +519,7 @@ class LosungsBot:
         self._init_quiz_service()
         self._init_reflection_service()
         self._init_mention_handler()
+        self._init_repost_service()
 
         # Scheduler einrichten
         scheduler = LosungScheduler(timezone=self.settings.timezone)
@@ -565,6 +598,16 @@ class LosungsBot:
                 job_name="Erwähnungen prüfen",
             )
 
+        # Repost/Boost (täglich)
+        if self.repost_service:
+            repost_hour, repost_minute = parse_time(self.settings.repost_time)
+            scheduler.schedule_daily_post(
+                job_func=self.run_repost,
+                hour=repost_hour,
+                minute=repost_minute,
+                job_id="daily_repost",
+            )
+
         logger.info(
             "bot_ready",
             post_time=self.settings.post_time,
@@ -575,6 +618,7 @@ class LosungsBot:
             quiz_enabled=self.quiz_service is not None,
             reflection_enabled=self.reflection_service is not None,
             mentions_enabled=self.mention_handler is not None,
+            repost_enabled=self.repost_service is not None,
         )
 
         # Scheduler starten (blockiert)

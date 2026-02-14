@@ -188,6 +188,23 @@ Alle Einstellungen erfolgen über Umgebungsvariablen (`.env`-Datei):
 | `METRICS_ENABLED` | Metriken-Endpoint aktivieren | `false` |
 | `METRICS_PORT` | HTTP-Port für /metrics | `8080` |
 
+### Automatisches Reposten/Boosten
+
+| Variable | Beschreibung | Default |
+|----------|--------------|---------|
+| `REPOST_ENABLED` | Automatisches Boosten aktivieren | `false` |
+| `REPOST_ACCOUNTS` | Komma-getrennte Liste von Accounts | - |
+| `REPOST_TIME` | Uhrzeit für den täglichen Repost-Check | `09:00` |
+
+**Beispiel:**
+```env
+REPOST_ENABLED=true
+REPOST_ACCOUNTS=BibelTV,ERF
+REPOST_TIME=09:00
+```
+
+Der Bot boosted automatisch alle Beiträge der konfigurierten Accounts aus den letzten 24 Stunden (einmal täglich zur angegebenen Uhrzeit).
+
 ## Prometheus Metriken
 
 Der Bot stellt Prometheus-Metriken bereit, wenn `METRICS_ENABLED=true` gesetzt ist.
@@ -253,6 +270,7 @@ Platziere die Dateien im `data/`-Verzeichnis. Der Bot lädt automatisch alle pas
 |-----|------|--------|
 | Täglich | 06:00 | Tageslosung posten |
 | Täglich | 08:00 | Neue Follower prüfen |
+| Täglich | 09:00 | Reposts/Boosts von konfigurierten Accounts |
 | Täglich | 12:00 | Reflexionsfrage posten |
 | Alle 5 Min | - | Erwähnungen prüfen |
 | Mittwoch | 18:00 | Bibelquiz posten |
