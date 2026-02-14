@@ -274,3 +274,87 @@ class MastodonClient:
             logger.error("total_likes_calculation_failed", error=str(e))
             return 0
 
+    def search_account(self, acct: str) -> dict | None:
+        """
+        Sucht einen Account anhand des Benutzernamens.
+
+        Args:
+            acct: Der Account-Name (z.B. "BibelTV" oder "BibelTV@mastodon.social")
+
+        Returns:
+            Das Account-Objekt oder None wenn nicht gefunden
+        """
+        try:
+            results = self._client.account_search(acct, limit=1)
+            if results:
+                account = results[0]
+                logger.info(
+                    "account_found",
+                    acct=account["acct"],
+                    display_name=account.get("display_name", ""),
+                )
+                return account
+            logger.warning("account_not_found", acct=acct)
+            return None
+        except Exception as e:
+            logger.error("account_search_failed", acct=acct, error=str(e))
+            return None
+
+    def get_account_statuses(
+        self,
+        account_id: str,
+        limit: int = 40,
+        exclude_replies: bool = True,
+        exclude_reblogs: bool = True,
+    ) -> list[dict]:
+        """
+        Ruft die Statuses eines Accounts ab.
+
+        Args:
+            account_id: Die Account-ID
+            limit: Maximale Anzahl
+            exclude_replies: Antworten ausschließen
+            exclude_reblogs: Reblogs ausschließen
+
+        Returns:
+            Liste von Status-Objekten
+        """
+        try:
+            statuses = self._client.account_statuses(
+                account_id,
+                limit=limit,
+                exclude_replies=exclude_replies,
+                exclude_reblogs=exclude_reblogs,
+            )
+            logger.info(
+                "account_statuses_fetched",
+                account_id=account_id,
+                count=len(statuses),
+            )
+            return statuses
+        except Exception as e:
+            logger.error(
+                "account_statuses_fetch_failed",
+                account_id=account_id,
+                error=str(e),
+            )
+            return []
+
+    def boost_status(self, status_id: str) -> dict | None:
+        """
+        Boosted (reblogged) einen Status.
+
+        Args:
+            status_id: Die ID des Status
+
+        Returns:
+            Das reblogged Status-Objekt oder None bei Fehler
+        """
+        try:
+            result = self._client.status_reblog(status_id)
+            logger.info("status_boosted", status_id=status_id)
+            return result
+        except Exception as e:
+            logger.error("status_boost_failed", status_id=status_id, error=str(e))
+            return None
+

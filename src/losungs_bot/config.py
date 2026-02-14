@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     metrics_enabled: bool = Field(default=False)  # Metriken-Endpoint aktivieren
     metrics_port: int = Field(default=8080)  # HTTP-Port für /metrics
 
+    # Repost/Boost Feature
+    repost_enabled: bool = Field(default=False)  # Accounts automatisch boosten
+    repost_accounts: str = Field(default="")  # Komma-getrennte Liste von Accounts
+    repost_time: str = Field(default="09:00")  # Uhrzeit für Repost-Check
+
 
 def get_settings() -> Settings:
     """Erstellt und gibt die Einstellungen zurück."""
