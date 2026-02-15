@@ -91,6 +91,10 @@ losungs-bot --test-welcome      # Test-Willkommensnachricht
 losungs-bot --test-quiz         # Quiz sofort posten
 losungs-bot --dry-run-quiz      # Quiz-Vorschau ohne Post
 losungs-bot --quiz-solution     # Quiz-Auflösung posten
+
+# Repost-Optionen
+losungs-bot --repost            # Reposten sofort ausführen
+losungs-bot --dry-run-repost    # Zeigt Beiträge die geboosted würden
 ```
 
 ## Konfiguration
