@@ -726,6 +726,16 @@ def main() -> None:
         action="store_true",
         help="Generiert ein Quiz und zeigt es an, ohne zu posten",
     )
+    parser.add_argument(
+        "--repost",
+        action="store_true",
+        help="Führt das Reposten/Boosten sofort aus",
+    )
+    parser.add_argument(
+        "--dry-run-repost",
+        action="store_true",
+        help="Zeigt an, welche Beiträge geboosted würden, ohne zu boosten",
+    )
 
     args = parser.parse_args()
 
@@ -842,6 +852,99 @@ def main() -> None:
         else:
             print("❌ Keine aktive Quiz-Frage oder Fehler beim Posten")
         sys.exit(0 if success else 1)
+    elif args.dry_run_repost:
+        if not bot.settings.repost_enabled or not bot.settings.repost_accounts:
+            print("❌ Repost nicht konfiguriert!")
+            print("   Setze REPOST_ENABLED=true und REPOST_ACCOUNTS=Account1,Account2")
+            sys.exit(1)
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+
+        from datetime import datetime, timedelta
+
+        accounts = [a.strip() for a in bot.settings.repost_accounts.split(",") if a.strip()]
+        cutoff_time = datetime.now().astimezone() - timedelta(hours=24)
+
+        print("\n" + "=" * 50)
+        print("🔄 VORSCHAU - Repost/Boost")
+        print("=" * 50)
+        print(f"Accounts: {', '.join(accounts)}")
+        print(f"Zeitfenster: Letzte 24 Stunden (seit {cutoff_time.strftime('%Y-%m-%d %H:%M')})")
+        print("=" * 50)
+
+        total_found = 0
+        for acct in accounts:
+            print(f"\n📌 Account: @{acct}")
+            print("-" * 40)
+
+            account = bot.mastodon.search_account(acct)
+            if not account:
+                print("   ❌ Account nicht gefunden!")
+                continue
+
+            print(f"   Name: {account.get('display_name', 'Unbekannt')}")
+            print(f"   Follower: {account.get('followers_count', 0)}")
+
+            statuses = bot.mastodon.get_account_statuses(
+                account["id"],
+                limit=40,
+                exclude_replies=True,
+                exclude_reblogs=True,
+            )
+
+            recent_statuses = []
+            for status in statuses:
+                created_at = status.get("created_at")
+                if not created_at:
+                    continue
+                if isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                if created_at >= cutoff_time:
+                    recent_statuses.append((status, created_at))
+
+            if not recent_statuses:
+                print("   Keine neuen Beiträge in den letzten 24h")
+                continue
+
+            print(f"   Gefundene Beiträge: {len(recent_statuses)}")
+            for status, created_at in recent_statuses:
+                already_boosted = "✓ bereits" if status.get("reblogged") else "○ neu"
+                content = status.get("content", "")[:80].replace("\n", " ")
+                # HTML-Tags entfernen für Vorschau
+                import re
+                content = re.sub(r"<[^>]+>", "", content)
+                print(f"\n   [{already_boosted}] {created_at.strftime('%H:%M')}")
+                print(f"   {content}...")
+                total_found += 1
+
+        print("\n" + "=" * 50)
+        print(f"Gesamt: {total_found} Beiträge würden geprüft")
+        print("=" * 50 + "\n")
+
+    elif args.repost:
+        if not bot.settings.repost_enabled or not bot.settings.repost_accounts:
+            print("❌ Repost nicht konfiguriert!")
+            print("   Setze REPOST_ENABLED=true und REPOST_ACCOUNTS=Account1,Account2")
+            sys.exit(1)
+        if not bot.mastodon.verify_credentials():
+            logger.error("invalid_mastodon_credentials")
+            sys.exit(1)
+
+        accounts = [a.strip() for a in bot.settings.repost_accounts.split(",") if a.strip()]
+        print(f"\n🔄 Starte Repost für: {', '.join(accounts)}")
+
+        bot._init_repost_service()
+        count = bot.run_repost()
+
+        if count > 0:
+            print(f"✅ {count} Beiträge geboosted")
+        else:
+            print("ℹ️  Keine neuen Beiträge zum Boosten gefunden")
+        sys.exit(0)
     elif args.dry_run:
         bot.dry_run()
     elif args.once:
