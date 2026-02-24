@@ -116,7 +116,8 @@ class PostFormatter:
 🔗 {self.COPYRIGHT_URL}
 ℹ️ {self.INFO_URL}
 
-#losung #DieLosungen #FediKirche #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott"""
+
+#losung #DieLosungen #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott #fediKirche #Motivation #Inspiration"""
 
     def _format_main_post(self, losung: Losung) -> str:
         """Formatiert den Hauptpost mit Bibelversen (ohne Copyright, ohne Hashtags)."""
