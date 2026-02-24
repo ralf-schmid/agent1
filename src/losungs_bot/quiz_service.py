@@ -140,7 +140,7 @@ Die Frage kann nach dem Buch, Verfasser, historischen Kontext oder der Bedeutung
 
 {quiz.question}
 
-#Bibelquiz #Bibel"""
+#Bibelquiz #FediKirche #Bibel"""
 
     def format_solution_post(
         self, quiz: QuizQuestion, poll_results: dict | None = None
