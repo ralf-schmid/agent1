@@ -94,4 +94,4 @@ Die Frage soll Menschen helfen, den Vers auf ihr eigenes Leben anzuwenden."""
 
 🤔 {question}
 
-#Losung #Reflexion #Glaube"""
+#Losung #FediKirche #Reflexion #Glaube"""

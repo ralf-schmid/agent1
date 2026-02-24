@@ -68,8 +68,9 @@ class PostFormatter:
         Formatiert eine Losung als Mastodon-Post.
 
         Wenn der vollständige Post zu lang ist, wird er automatisch aufgeteilt:
-        - Hauptpost: Bibelverse mit Links und Hashtags
-        - Antwort: Copyright-Hinweise
+        - Stufe 1: Alles in einem Post (Verse + Copyright + Hashtags)
+        - Stufe 2: Hauptpost (beide Verse) + Antwort (Copyright + Hashtags)
+        - Stufe 3: Hauptpost (nur Losung) + Antwort (Lehrtext + Copyright + Hashtags)
 
         Args:
             losung: Die zu formatierende Losung
@@ -77,14 +78,21 @@ class PostFormatter:
         Returns:
             FormattedPost mit main_post und optional copyright_reply
         """
-        # Versuche zuerst den kompakten Einzel-Post
+        # Stufe 1: Versuche den kompakten Einzel-Post
         single_post = self._format_single_post(losung)
         if len(single_post) <= self.MAX_LENGTH:
             return FormattedPost(main_post=single_post)
 
-        # Wenn zu lang: aufteilen in Hauptpost und Copyright-Antwort
+        # Stufe 2: Aufteilen in Hauptpost (beide Verse) und Copyright-Antwort
         main_post = self._format_main_post(losung)
         copyright_reply = self._format_copyright_reply()
+
+        if len(main_post) <= self.MAX_LENGTH:
+            return FormattedPost(main_post=main_post, copyright_reply=copyright_reply)
+
+        # Stufe 3: Nur Losungsvers im Hauptpost, Lehrtext + Copyright in Antwort
+        main_post = self._format_losung_only(losung)
+        copyright_reply = self._format_lehrtext_and_copyright(losung)
 
         return FormattedPost(main_post=main_post, copyright_reply=copyright_reply)
 
@@ -108,6 +116,7 @@ class PostFormatter:
 🔗 {self.COPYRIGHT_URL}
 ℹ️ {self.INFO_URL}
 
+
 #losung #DieLosungen #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott #fediKirche #Motivation #Inspiration"""
 
     def _format_main_post(self, losung: Losung) -> str:
@@ -126,6 +135,35 @@ class PostFormatter:
 — {losung.lehrtextvers}
 🔗 {lehrtext_url}"""
 
+    def _format_losung_only(self, losung: Losung) -> str:
+        """Formatiert nur den Losungsvers (wenn beide Verse zusammen zu lang sind)."""
+        datum_str = self._format_date(losung.datum)
+        losung_url = self.bible_links.generate_url(losung.losungsvers)
+
+        return f"""📖 Die Losungen – {datum_str}
+
+✨ „{losung.losungstext}"
+— {losung.losungsvers}
+🔗 {losung_url}"""
+
+    def _format_lehrtext_and_copyright(self, losung: Losung) -> str:
+        """Formatiert den Lehrtext zusammen mit Copyright und Hashtags."""
+        lehrtext_url = self.bible_links.generate_url(losung.lehrtextvers)
+
+        return f"""💫 „{losung.lehrtext}"
+— {losung.lehrtextvers}
+🔗 {lehrtext_url}
+
+{self.COPYRIGHT}
+🔗 {self.COPYRIGHT_URL}
+ℹ️ {self.INFO_URL}
+
+🎧 Als Podcast:
+🍎 {self.podcast_apple}
+🟢 {self.podcast_spotify}
+
+#losung #DieLosungen #FediKirche #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott"""
+
     def _format_copyright_reply(self) -> str:
         """Formatiert die Copyright-Antwort mit Podcast-Links und Hashtags."""
         return f"""{self.COPYRIGHT}
@@ -136,7 +174,7 @@ class PostFormatter:
 🍎 {self.podcast_apple}
 🟢 {self.podcast_spotify}
 
-#losung #DieLosungen #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott #Motivation #Inspiration"""
+#losung #DieLosungen #FediKirche #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott"""
 
     def _format_date(self, datum: date) -> str:
         """Formatiert ein Datum auf Deutsch."""

@@ -70,9 +70,14 @@ class TestPostFormatter:
         self, formatter: PostFormatter, sample_losung: Losung
     ):
         formatted = formatter.format_post(sample_losung)
-        assert "#DieLosungen" in formatted.main_post
-        assert "#Bibel" in formatted.main_post
-        assert "#Herrnhut" in formatted.main_post
+        # Hashtags können im Hauptpost oder in der Antwort sein
+        all_content = formatted.main_post
+        if formatted.copyright_reply:
+            all_content += formatted.copyright_reply
+        assert "#DieLosungen" in all_content
+        assert "#FediKirche" in all_content
+        assert "#Bibel" in all_content
+        assert "#Herrnhut" in all_content
 
     def test_format_includes_copyright(
         self, formatter: PostFormatter, sample_losung: Losung
@@ -121,6 +126,32 @@ class TestPostFormatter:
         assert formatted.needs_reply
         assert formatted.copyright_reply is not None
         # Beide Posts müssen unter 500 Zeichen sein
+        assert len(formatted.main_post) <= 500
+        assert len(formatted.copyright_reply) <= 500
+
+    def test_very_long_post_splits_verses(self, formatter: PostFormatter):
+        """Wenn beide Verse zusammen > 500 Zeichen sind, wird weiter aufgeteilt."""
+        very_long_losung = Losung(
+            datum=date(2026, 2, 24),
+            losungstext="Fürchte dich nicht, denn ich bin mit dir; "
+            "hab keine Angst, denn ich bin dein Gott. "
+            "Ich stärke dich, ja, ich helfe dir, ja, "
+            "ich halte dich aufrecht mit der Rechten meiner Gerechtigkeit. "
+            "Denn ich, der HERR, dein Gott, ergreife deine rechte Hand "
+            "und sage zu dir: Fürchte dich nicht, ich helfe dir!",
+            losungsvers="Jesaja 41,10-13",
+            lehrtext="So seid nun stark und lasst eure Hände nicht sinken; "
+            "denn euer Werk hat seinen Lohn.",
+            lehrtextvers="2. Chronik 15,7",
+        )
+        formatted = formatter.format_post(very_long_losung)
+        assert formatted.needs_reply
+        # Hauptpost enthält nur den Losungsvers, nicht den Lehrtext
+        assert "Jesaja" in formatted.main_post
+        assert "Chronik" not in formatted.main_post
+        # Antwort enthält den Lehrtext
+        assert "Chronik" in formatted.copyright_reply
+        # Beide müssen unter 500 Zeichen sein
         assert len(formatted.main_post) <= 500
         assert len(formatted.copyright_reply) <= 500
 
