@@ -94,6 +94,10 @@ class PostFormatter:
         main_post = self._format_losung_only(losung)
         copyright_reply = self._format_lehrtext_and_copyright(losung)
 
+        # Falls Antwort immer noch zu lang: kompakte Variante ohne Podcasts
+        if len(copyright_reply) > self.MAX_LENGTH:
+            copyright_reply = self._format_lehrtext_and_copyright_compact(losung)
+
         return FormattedPost(main_post=main_post, copyright_reply=copyright_reply)
 
     def _format_single_post(self, losung: Losung) -> str:
@@ -163,6 +167,19 @@ class PostFormatter:
 🟢 {self.podcast_spotify}
 
 #losung #DieLosungen #FediKirche #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott"""
+
+    def _format_lehrtext_and_copyright_compact(self, losung: Losung) -> str:
+        """Kompakte Variante ohne Podcast-Links (wenn Lehrtext+Copyright zu lang)."""
+        lehrtext_url = self.bible_links.generate_url(losung.lehrtextvers)
+
+        return f"""💫 „{losung.lehrtext}"
+— {losung.lehrtextvers}
+🔗 {lehrtext_url}
+
+{self.COPYRIGHT}
+🔗 {self.COPYRIGHT_URL}
+
+#losung #DieLosungen #FediKirche"""
 
     def _format_copyright_reply(self) -> str:
         """Formatiert die Copyright-Antwort mit Podcast-Links und Hashtags."""

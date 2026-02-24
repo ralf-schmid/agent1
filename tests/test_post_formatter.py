@@ -155,6 +155,30 @@ class TestPostFormatter:
         assert len(formatted.main_post) <= 500
         assert len(formatted.copyright_reply) <= 500
 
+    def test_very_long_lehrtext_compact_reply(self, formatter: PostFormatter):
+        """Wenn Lehrtext+Copyright > 500 Zeichen: kompakte Antwort ohne Podcasts."""
+        losung = Losung(
+            datum=date(2026, 2, 24),
+            losungstext="Fürchte dich nicht, denn ich bin mit dir; "
+            "hab keine Angst, denn ich bin dein Gott. "
+            "Ich stärke dich, ja, ich helfe dir, ja, "
+            "ich halte dich aufrecht mit der Rechten meiner Gerechtigkeit.",
+            losungsvers="Jesaja 41,10",
+            lehrtext="Denn Gott hat uns nicht gegeben den Geist der Furcht, "
+            "sondern der Kraft und der Liebe und der Besonnenheit. "
+            "Darum schäme dich nicht des Zeugnisses von unserm Herrn "
+            "noch meiner, der ich sein Gefangener bin, sondern leide "
+            "mit für das Evangelium in der Kraft Gottes.",
+            lehrtextvers="2. Timotheus 1,7-8",
+        )
+        formatted = formatter.format_post(losung)
+        assert formatted.needs_reply
+        # Beide Posts müssen unter 500 Zeichen sein
+        assert len(formatted.main_post) <= 500
+        assert len(formatted.copyright_reply) <= 500
+        # Copyright muss trotzdem enthalten sein
+        assert "Herrnhuter" in formatted.copyright_reply
+
     def test_formatted_post_dataclass(self):
         """Test der FormattedPost Datenstruktur."""
         # Ohne Antwort
