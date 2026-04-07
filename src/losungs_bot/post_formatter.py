@@ -9,15 +9,21 @@ from losungs_bot.losungen import Losung
 
 @dataclass
 class FormattedPost:
-    """Ein formatierter Post, möglicherweise mit Copyright-Antwort."""
+    """Ein formatierter Post, möglicherweise mit Antworten."""
 
     main_post: str
+    lehrtext_reply: str | None = None  # Nur Lehrtext (bei 3-Post-Struktur)
     copyright_reply: str | None = None
 
     @property
     def needs_reply(self) -> bool:
-        """True wenn der Copyright-Text als separate Antwort gepostet werden muss."""
-        return self.copyright_reply is not None
+        """True wenn mindestens eine Antwort gepostet werden muss."""
+        return self.lehrtext_reply is not None or self.copyright_reply is not None
+
+    @property
+    def needs_second_reply(self) -> bool:
+        """True wenn eine dritte Antwort (Copyright) gepostet werden muss."""
+        return self.lehrtext_reply is not None and self.copyright_reply is not None
 
 
 class PostFormatter:
@@ -92,9 +98,20 @@ class PostFormatter:
 
         # Stufe 3: Nur Losungsvers im Hauptpost, Lehrtext + Copyright in Antwort
         main_post = self._format_losung_only(losung)
-        copyright_reply = self._format_lehrtext_and_copyright(losung)
+        lehrtext_copyright_reply = self._format_lehrtext_and_copyright(losung)
 
-        return FormattedPost(main_post=main_post, copyright_reply=copyright_reply)
+        if len(lehrtext_copyright_reply) <= self.MAX_LENGTH:
+            return FormattedPost(main_post=main_post, copyright_reply=lehrtext_copyright_reply)
+
+        # Stufe 4: 3 Posts - Losung, Lehrtext, Copyright (beide Verse bleiben erhalten)
+        lehrtext_reply = self._format_lehrtext_only(losung)
+        copyright_reply = self._format_copyright_reply()
+
+        return FormattedPost(
+            main_post=main_post,
+            lehrtext_reply=lehrtext_reply,
+            copyright_reply=copyright_reply,
+        )
 
     def _format_single_post(self, losung: Losung) -> str:
         """Formatiert einen kompakten Einzel-Post (wenn möglich)."""
@@ -163,6 +180,14 @@ class PostFormatter:
 🟢 {self.podcast_spotify}
 
 #losung #DieLosungen #FediKirche #Bibel #Herrnhut #Jesus #Bibelvers #Gotteswort #Glaube #Gott"""
+
+    def _format_lehrtext_only(self, losung: Losung) -> str:
+        """Formatiert nur den Lehrtext (bei 3-Post-Struktur)."""
+        lehrtext_url = self.bible_links.generate_url(losung.lehrtextvers)
+
+        return f"""💫 „{losung.lehrtext}"
+— {losung.lehrtextvers}
+🔗 {lehrtext_url}"""
 
     def _format_copyright_reply(self) -> str:
         """Formatiert die Copyright-Antwort mit Podcast-Links und Hashtags."""

@@ -155,14 +155,55 @@ class TestPostFormatter:
         assert len(formatted.main_post) <= 500
         assert len(formatted.copyright_reply) <= 500
 
+    def test_very_long_lehrtext_three_posts(self, formatter: PostFormatter):
+        """Wenn Lehrtext+Copyright > 500 Zeichen: 3-Post-Struktur."""
+        losung = Losung(
+            datum=date(2026, 2, 24),
+            losungstext="Fürchte dich nicht, denn ich bin mit dir; "
+            "hab keine Angst, denn ich bin dein Gott. "
+            "Ich stärke dich, ja, ich helfe dir, ja, "
+            "ich halte dich aufrecht mit der Rechten meiner Gerechtigkeit.",
+            losungsvers="Jesaja 41,10",
+            lehrtext="Denn Gott hat uns nicht gegeben den Geist der Furcht, "
+            "sondern der Kraft und der Liebe und der Besonnenheit. "
+            "Darum schäme dich nicht des Zeugnisses von unserm Herrn "
+            "noch meiner, der ich sein Gefangener bin, sondern leide "
+            "mit für das Evangelium in der Kraft Gottes.",
+            lehrtextvers="2. Timotheus 1,7-8",
+        )
+        formatted = formatter.format_post(losung)
+        assert formatted.needs_reply
+        assert formatted.needs_second_reply  # 3-Post-Struktur
+        # Alle Posts müssen unter 500 Zeichen sein
+        assert len(formatted.main_post) <= 500
+        assert len(formatted.lehrtext_reply) <= 500
+        assert len(formatted.copyright_reply) <= 500
+        # Lehrtext muss im Lehrtext-Reply sein (nicht abgeschnitten!)
+        assert "Timotheus" in formatted.lehrtext_reply
+        # Copyright muss im Copyright-Reply sein
+        assert "Herrnhuter" in formatted.copyright_reply
+
     def test_formatted_post_dataclass(self):
         """Test der FormattedPost Datenstruktur."""
-        # Ohne Antwort
+        # Ohne Antwort (Stufe 1)
         post = FormattedPost(main_post="Test")
         assert not post.needs_reply
+        assert not post.needs_second_reply
         assert post.copyright_reply is None
 
-        # Mit Antwort
+        # Mit einer Antwort (Stufe 2/3)
         post_with_reply = FormattedPost(main_post="Test", copyright_reply="Copyright")
         assert post_with_reply.needs_reply
+        assert not post_with_reply.needs_second_reply
         assert post_with_reply.copyright_reply == "Copyright"
+
+        # Mit zwei Antworten (Stufe 4 - 3-Post-Struktur)
+        post_three = FormattedPost(
+            main_post="Losung",
+            lehrtext_reply="Lehrtext",
+            copyright_reply="Copyright",
+        )
+        assert post_three.needs_reply
+        assert post_three.needs_second_reply
+        assert post_three.lehrtext_reply == "Lehrtext"
+        assert post_three.copyright_reply == "Copyright"
