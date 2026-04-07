@@ -229,20 +229,40 @@ class LosungsBot:
         self.activity_logger.log_losung_posted(losung.losungstext)
         self.metrics.record_post("losung")
 
-        # Copyright-Antwort posten wenn nötig
+        # Antworten posten wenn nötig (2- oder 3-Post-Struktur)
         if formatted.needs_reply:
-            reply_result = self.mastodon.post_status(
-                formatted.copyright_reply,
-                in_reply_to_id=result["id"],
-            )
-            if reply_result:
-                logger.info(
-                    "copyright_reply_posted",
-                    reply_id=reply_result["id"],
-                    parent_id=result["id"],
+            reply_to_id = result["id"]
+
+            # Bei 3-Post-Struktur: erst Lehrtext als Antwort
+            if formatted.lehrtext_reply:
+                lehrtext_result = self.mastodon.post_status(
+                    formatted.lehrtext_reply,
+                    in_reply_to_id=reply_to_id,
                 )
-            else:
-                logger.warning("copyright_reply_failed", parent_id=result["id"])
+                if lehrtext_result:
+                    logger.info(
+                        "lehrtext_reply_posted",
+                        reply_id=lehrtext_result["id"],
+                        parent_id=reply_to_id,
+                    )
+                    reply_to_id = lehrtext_result["id"]  # Copyright antwortet auf Lehrtext
+                else:
+                    logger.warning("lehrtext_reply_failed", parent_id=reply_to_id)
+
+            # Copyright-Antwort posten
+            if formatted.copyright_reply:
+                copyright_result = self.mastodon.post_status(
+                    formatted.copyright_reply,
+                    in_reply_to_id=reply_to_id,
+                )
+                if copyright_result:
+                    logger.info(
+                        "copyright_reply_posted",
+                        reply_id=copyright_result["id"],
+                        parent_id=reply_to_id,
+                    )
+                else:
+                    logger.warning("copyright_reply_failed", parent_id=reply_to_id)
 
         return True
 
@@ -655,12 +675,23 @@ class LosungsBot:
         print(f"📏 Länge: {main_length}/500 Zeichen")
 
         if formatted.needs_reply:
-            print("\n" + "-" * 50)
-            print("↩️  ANTWORT (Copyright + Podcast)")
-            print("-" * 50)
-            print(formatted.copyright_reply)
-            print("-" * 50)
-            print(f"📏 Länge: {len(formatted.copyright_reply)}/500 Zeichen")
+            # Bei 3-Post-Struktur: erst Lehrtext anzeigen
+            if formatted.lehrtext_reply:
+                print("\n" + "-" * 50)
+                print("↩️  ANTWORT 1 (Lehrtext)")
+                print("-" * 50)
+                print(formatted.lehrtext_reply)
+                print("-" * 50)
+                print(f"📏 Länge: {len(formatted.lehrtext_reply)}/500 Zeichen")
+
+            if formatted.copyright_reply:
+                reply_num = "2" if formatted.lehrtext_reply else ""
+                print("\n" + "-" * 50)
+                print(f"↩️  ANTWORT {reply_num} (Copyright + Podcast)".replace("  ", " "))
+                print("-" * 50)
+                print(formatted.copyright_reply)
+                print("-" * 50)
+                print(f"📏 Länge: {len(formatted.copyright_reply)}/500 Zeichen")
 
         # Gottesdienst-Vorschau
         if self.settings.church_reminder_enabled:

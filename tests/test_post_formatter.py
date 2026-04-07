@@ -155,8 +155,8 @@ class TestPostFormatter:
         assert len(formatted.main_post) <= 500
         assert len(formatted.copyright_reply) <= 500
 
-    def test_very_long_lehrtext_compact_reply(self, formatter: PostFormatter):
-        """Wenn Lehrtext+Copyright > 500 Zeichen: kompakte Antwort ohne Podcasts."""
+    def test_very_long_lehrtext_three_posts(self, formatter: PostFormatter):
+        """Wenn Lehrtext+Copyright > 500 Zeichen: 3-Post-Struktur."""
         losung = Losung(
             datum=date(2026, 2, 24),
             losungstext="Fürchte dich nicht, denn ich bin mit dir; "
@@ -173,20 +173,37 @@ class TestPostFormatter:
         )
         formatted = formatter.format_post(losung)
         assert formatted.needs_reply
-        # Beide Posts müssen unter 500 Zeichen sein
+        assert formatted.needs_second_reply  # 3-Post-Struktur
+        # Alle Posts müssen unter 500 Zeichen sein
         assert len(formatted.main_post) <= 500
+        assert len(formatted.lehrtext_reply) <= 500
         assert len(formatted.copyright_reply) <= 500
-        # Copyright muss trotzdem enthalten sein
+        # Lehrtext muss im Lehrtext-Reply sein (nicht abgeschnitten!)
+        assert "Timotheus" in formatted.lehrtext_reply
+        # Copyright muss im Copyright-Reply sein
         assert "Herrnhuter" in formatted.copyright_reply
 
     def test_formatted_post_dataclass(self):
         """Test der FormattedPost Datenstruktur."""
-        # Ohne Antwort
+        # Ohne Antwort (Stufe 1)
         post = FormattedPost(main_post="Test")
         assert not post.needs_reply
+        assert not post.needs_second_reply
         assert post.copyright_reply is None
 
-        # Mit Antwort
+        # Mit einer Antwort (Stufe 2/3)
         post_with_reply = FormattedPost(main_post="Test", copyright_reply="Copyright")
         assert post_with_reply.needs_reply
+        assert not post_with_reply.needs_second_reply
         assert post_with_reply.copyright_reply == "Copyright"
+
+        # Mit zwei Antworten (Stufe 4 - 3-Post-Struktur)
+        post_three = FormattedPost(
+            main_post="Losung",
+            lehrtext_reply="Lehrtext",
+            copyright_reply="Copyright",
+        )
+        assert post_three.needs_reply
+        assert post_three.needs_second_reply
+        assert post_three.lehrtext_reply == "Lehrtext"
+        assert post_three.copyright_reply == "Copyright"
