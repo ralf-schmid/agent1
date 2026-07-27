@@ -11,6 +11,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Least-Privilege-Default; Jobs erhöhen granular (siehe build-and-push)
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
