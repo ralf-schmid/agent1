@@ -313,10 +313,13 @@ class LosungsBot:
             logger.warning("quiz_service_not_initialized")
             return False
 
-        # Prüfen ob noch ein Quiz aktiv ist
+        # Liegengebliebenes Quiz (z.B. verpasste Auflösung) nachträglich
+        # auflösen bzw. verwerfen, damit es nicht jedes neue Quiz blockiert
         if self.quiz_state.has_active_quiz():
-            logger.warning("quiz_already_active")
-            return False
+            logger.warning("stale_active_quiz_found")
+            if not self.post_quiz_solution():
+                logger.warning("stale_active_quiz_discarded")
+                self.quiz_state.clear_active_quiz()
 
         logger.info("generating_quiz")
 

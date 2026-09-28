@@ -9,7 +9,7 @@ logger = structlog.get_logger()
 class AIClient:
     """Wrapper für den Anthropic-Client."""
 
-    DEFAULT_MODEL = "claude-3-haiku-20240307"
+    DEFAULT_MODEL = "claude-haiku-4-5"
 
     def __init__(self, api_key: str):
         """
