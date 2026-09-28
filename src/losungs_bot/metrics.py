@@ -148,16 +148,16 @@ class MetricsCollector:
         try:
             cpu_percent = self._process.cpu_percent(interval=None)
             CPU_USAGE_PERCENT.set(cpu_percent)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("cpu_metrics_update_failed", error=str(e))
 
         # RAM (Prozess-spezifisch)
         try:
             memory_info = self._process.memory_info()
             MEMORY_USAGE_BYTES.set(memory_info.rss)
             MEMORY_USAGE_PERCENT.set(self._process.memory_percent())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("memory_metrics_update_failed", error=str(e))
 
     def record_post(self, post_type: str) -> None:
         """

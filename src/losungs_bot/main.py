@@ -296,12 +296,16 @@ class LosungsBot:
             logger.info("new_followers_processed", count=count)
 
         # Metriken aktualisieren (Follower und Likes)
+        self._update_account_metrics()
+
+    def _update_account_metrics(self) -> None:
+        """Aktualisiert Follower- und Like-Metriken; Fehler sind nicht kritisch."""
         try:
             me = self.mastodon._client.me()
             self.metrics.set_followers_count(me.get("followers_count", 0))
             self.metrics.set_likes_total(self.mastodon.get_total_likes())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("account_metrics_update_failed", error=str(e))
 
     def post_quiz(self) -> bool:
         """Postet ein neues Quiz basierend auf der Tageslosung."""
@@ -526,12 +530,7 @@ class LosungsBot:
         if self.settings.metrics_enabled:
             start_metrics_server(port=self.settings.metrics_port)
             # Initial Metriken setzen
-            try:
-                me = self.mastodon._client.me()
-                self.metrics.set_followers_count(me.get("followers_count", 0))
-                self.metrics.set_likes_total(self.mastodon.get_total_likes())
-            except Exception:
-                pass
+            self._update_account_metrics()
 
         # Optionale Komponenten initialisieren
         self._init_church_reminder()
