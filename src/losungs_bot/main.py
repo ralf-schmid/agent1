@@ -94,8 +94,22 @@ class LosungsBot:
     def _get_ai_client(self) -> AIClient | None:
         """Gibt den gemeinsamen AI-Client zurück (Lazy Init)."""
         if self._ai_client is None and self.settings.anthropic_api_key:
-            self._ai_client = AIClient(self.settings.anthropic_api_key)
+            self._ai_client = AIClient(
+                self.settings.anthropic_api_key,
+                on_error=self._notify_admin_ai_error,
+            )
         return self._ai_client
+
+    def _notify_admin_ai_error(self, error: str) -> None:
+        """Informiert den Admin per DM über einen fehlgeschlagenen KI-Aufruf."""
+        admin = self.settings.admin_notify_account
+        if not admin:
+            return
+        self.mastodon.send_direct_message(
+            admin,
+            "⚠️ KI-Aufruf fehlgeschlagen – Quiz/Reflexion fallen aus, "
+            f"bis das behoben ist.\n\nFehler: {error[:300]}",
+        )
 
     def _init_church_reminder(self) -> None:
         """Initialisiert die Gottesdienst-Erinnerung."""
@@ -827,7 +841,8 @@ def main() -> None:
         print("-" * 50)
         print("⏳ Generiere Quiz mit Claude...")
 
-        ai_client = bot._get_ai_client()
+        # Ohne Admin-DM: die Vorschau soll nichts auf Mastodon senden
+        ai_client = AIClient(bot.settings.anthropic_api_key)
         quiz_service = QuizService(ai_client=ai_client)
         quiz = quiz_service.generate_quiz(losung)
 

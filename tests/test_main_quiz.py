@@ -50,3 +50,26 @@ def test_no_active_quiz_skips_solution():
 
     bot.post_quiz_solution.assert_not_called()
     bot.losungen_parser.get_today.assert_called_once()
+
+
+def test_ai_error_sends_admin_dm():
+    bot = LosungsBot.__new__(LosungsBot)
+    bot.settings = MagicMock(admin_notify_account="admin@example.social")
+    bot.mastodon = MagicMock()
+
+    bot._notify_admin_ai_error("credit balance too low")
+
+    bot.mastodon.send_direct_message.assert_called_once()
+    to_user, text = bot.mastodon.send_direct_message.call_args.args
+    assert to_user == "admin@example.social"
+    assert "credit balance too low" in text
+
+
+def test_ai_error_without_admin_account_sends_nothing():
+    bot = LosungsBot.__new__(LosungsBot)
+    bot.settings = MagicMock(admin_notify_account=None)
+    bot.mastodon = MagicMock()
+
+    bot._notify_admin_ai_error("credit balance too low")
+
+    bot.mastodon.send_direct_message.assert_not_called()
