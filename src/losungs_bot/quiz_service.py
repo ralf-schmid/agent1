@@ -1,6 +1,7 @@
 """Bibelquiz-Service mit KI-generierter Fragestellung."""
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -10,6 +11,9 @@ from losungs_bot.ai_client import AIClient
 from losungs_bot.losungen import Losung
 
 logger = structlog.get_logger()
+
+# Mastodon (Standard-Instanz) erlaubt max. 50 Zeichen pro Umfrage-Option
+MAX_POLL_OPTION_LENGTH = 50
 
 
 @dataclass
@@ -35,7 +39,7 @@ Du kannst also auch nach dem Buch oder dem Verfasser fragen.
 Regeln:
 1. Die Frage muss faktisch korrekt und verifizierbar sein
 2. Erstelle genau 4 Antwortmöglichkeiten
-3. Nur EINE Antwort darf richtig sein
+3. Nur EINE Antwort darf richtig sein, jede Antwort höchstens 50 Zeichen lang
 4. Die falschen Antworten müssen plausibel klingen
 5. Die Frage soll zum Nachdenken anregen und lehrreich sein
 6. Mögliche Fragetypen:
@@ -46,7 +50,7 @@ Regeln:
    - Was bedeutet ein bestimmtes Wort/Begriff im Text?
    - An wen waren diese Worte gerichtet?
 
-Antworte NUR mit validem JSON im folgenden Format:
+Antworte NUR mit validem JSON (ohne Markdown-Codeblock) im folgenden Format:
 {
   "question": "Die Quizfrage",
   "options": ["Option A", "Option B", "Option C", "Option D"],
@@ -98,12 +102,24 @@ Die Frage kann nach dem Buch, Verfasser, historischen Kontext oder der Bedeutung
                 return None
 
             # JSON aus der Antwort extrahieren
-            quiz_data = json.loads(content)
+            quiz_data = json.loads(self._extract_json(content))
+
+            options = [
+                self._shorten_option(str(o)) for o in quiz_data["options"]
+            ]
+            correct_index = int(quiz_data["correct_index"])
+            if len(options) != 4 or not 0 <= correct_index < len(options):
+                logger.error(
+                    "quiz_invalid_structure",
+                    options_count=len(options),
+                    correct_index=correct_index,
+                )
+                return None
 
             quiz = QuizQuestion(
                 question=quiz_data["question"],
-                options=quiz_data["options"],
-                correct_index=quiz_data["correct_index"],
+                options=options,
+                correct_index=correct_index,
                 explanation=quiz_data["explanation"],
                 losung_reference=losung.losungsvers,
             )
@@ -122,6 +138,25 @@ Die Frage kann nach dem Buch, Verfasser, historischen Kontext oder der Bedeutung
         except Exception as e:
             logger.error("quiz_generation_failed", error=str(e))
             return None
+
+    @staticmethod
+    def _extract_json(content: str) -> str:
+        """Entfernt Markdown-Codeblöcke bzw. Begleittext um das JSON-Objekt."""
+        fenced = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
+        if fenced:
+            content = fenced.group(1)
+        start, end = content.find("{"), content.rfind("}")
+        if start != -1 and end > start:
+            return content[start : end + 1]
+        return content
+
+    @staticmethod
+    def _shorten_option(option: str) -> str:
+        """Kürzt eine Antwortoption auf die Mastodon-Maximallänge."""
+        option = option.strip()
+        if len(option) <= MAX_POLL_OPTION_LENGTH:
+            return option
+        return option[: MAX_POLL_OPTION_LENGTH - 1].rstrip() + "…"
 
     def format_quiz_post(self, quiz: QuizQuestion, losung_text: str) -> str:
         """
