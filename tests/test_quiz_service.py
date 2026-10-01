@@ -187,3 +187,56 @@ class TestQuizStateManager:
 
         manager = QuizStateManager(temp_state_file)
         assert not manager.has_active_quiz()
+
+
+class TestQuizGeneration:
+    """Tests für das Parsen der KI-Antwort."""
+
+    VALID_JSON = (
+        '{"question": "Aus welchem Buch?", '
+        '"options": ["Genesis", "Exodus", "Jesaja", "Psalmen"], '
+        '"correct_index": 2, "explanation": "Prophet."}'
+    )
+
+    @pytest.fixture
+    def losung(self):
+        from unittest.mock import MagicMock
+
+        losung = MagicMock()
+        losung.losungsvers = "Jesaja 41,10"
+        losung.losungstext = "Fürchte dich nicht, ich bin mit dir."
+        return losung
+
+    def _service(self, response: str) -> QuizService:
+        from unittest.mock import MagicMock
+
+        ai_client = MagicMock()
+        ai_client.generate.return_value = response
+        return QuizService(ai_client=ai_client)
+
+    def test_plain_json(self, losung):
+        quiz = self._service(self.VALID_JSON).generate_quiz(losung)
+        assert quiz is not None
+        assert quiz.options[quiz.correct_index] == "Jesaja"
+
+    def test_json_in_markdown_code_block(self, losung):
+        """Neuere Modelle verpacken das JSON gern in ```json ... ```."""
+        response = f"```json\n{self.VALID_JSON}\n```"
+        quiz = self._service(response).generate_quiz(losung)
+        assert quiz is not None
+        assert quiz.correct_index == 2
+
+    def test_json_with_surrounding_text(self, losung):
+        response = f"Hier ist die Frage:\n{self.VALID_JSON}\nViel Spaß!"
+        assert self._service(response).generate_quiz(losung) is not None
+
+    def test_long_options_are_shortened(self, losung):
+        long_option = "A" * 80
+        response = self.VALID_JSON.replace('"Genesis"', f'"{long_option}"')
+        quiz = self._service(response).generate_quiz(losung)
+        assert quiz is not None
+        assert all(len(o) <= 50 for o in quiz.options)
+
+    def test_invalid_correct_index_rejected(self, losung):
+        response = self.VALID_JSON.replace('"correct_index": 2', '"correct_index": 7')
+        assert self._service(response).generate_quiz(losung) is None
