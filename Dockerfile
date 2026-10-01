@@ -1,5 +1,9 @@
 FROM python:3.14-slim
 
+# UTF-8 für Konsolenausgabe (sonst kaputte Emojis/Umlaute in Logs)
+ENV LANG=C.UTF-8 \
+    PYTHONIOENCODING=utf-8
+
 # Arbeitsverzeichnis
 WORKDIR /app
 
