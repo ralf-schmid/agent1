@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 # UTF-8 für Konsolenausgabe (sonst kaputte Emojis/Umlaute in Logs)
 ENV LANG=C.UTF-8 \
